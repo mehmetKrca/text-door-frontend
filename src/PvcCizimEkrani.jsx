@@ -135,9 +135,7 @@ export default function PvcCizimEkrani() {
       if (!token) { setArsivYukleniyor(false); return; }
       try {
         setArsivYukleniyor(true);
-        const response = await API.get('users/projeleri-getir/', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await API.get('users/projeleri-getir/');
         if (response.data && Array.isArray(response.data)) {
           setMusteriArsivi(prev => {
              const yerelArsiv = prev.length > 0 ? prev : JSON.parse(localStorage.getItem('bayiMusteriArsivi') || '[]');
@@ -238,9 +236,7 @@ export default function PvcCizimEkrani() {
   useEffect(() => {
     const fiyatlariBuluttanGetir = async () => {
       try {
-        const token = getAuthToken();
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await API.get('users/fiyat-tablosu/', { headers });
+        const response = await API.get('users/fiyat-tablosu/');
         const gelenVeri = response.data?.veri || (Object.keys(response.data || {}).length > 0 ? response.data : null);
 
         if (gelenVeri && Object.keys(gelenVeri).length > 0 && gelenVeri.beyaz) {
@@ -274,10 +270,8 @@ export default function PvcCizimEkrani() {
 
   const handleFiyatlariBulutaKaydet = async () => {
     try {
-      const token = getAuthToken();
       const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        'Content-Type': 'application/json'
       };
       await API.post('users/fiyat-tablosu/', fiyatTablo, { headers });
       alert("Birim fiyatlarınız veritabanına başarıyla sabitlendi! 🚀");
@@ -555,7 +549,7 @@ export default function PvcCizimEkrani() {
     const token = getAuthToken();
     if (token) {
       try {
-        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+        const headers = { 'Content-Type': 'application/json' };
         const djangoVerisi = {
           proje_adi: projeAdi, musteri_tel: musteriTel || '', notlar: siparisNotu || '', iban_bilgisi: kurumsalIban || '', durum: 'teklif', teklif_tarihi: teklifTarihi, toplam_fiyat: guncelToplam,
           kalemler: sepet.map(item => ({ isim: item.isim, urun_tipi: item.urunTipi, genislik: item.genislik, yukseklik: item.yukseklik, fiyat: Math.ceil(item.fiyat), detaylar: item }))
@@ -576,7 +570,7 @@ export default function PvcCizimEkrani() {
     const token = getAuthToken();
     if (token) {
       try {
-        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+        const headers = { 'Content-Type': 'application/json' };
         await API.patch(`users/proje-durum-guncelle/${id}/`, { durum: yeniDurum }, { headers });
       } catch (error) { console.error("Durum veritabanında güncellenirken sorun oluştu:", error); }
     }

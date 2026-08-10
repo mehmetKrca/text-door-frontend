@@ -19,7 +19,7 @@ function Register() {
 
   // Sayfa açıldığı an admin panelindeki paketleri Django'dan çekiyoruz
   useEffect(() => {
-    API.get('packages/')
+    API.get('users/packages/')
       .then(response => {
         // Django'dan gelen veri listesini state'e atıyoruz
         setPackages(response.data)
@@ -42,7 +42,7 @@ function Register() {
     setMesaj({ text: '', type: '' })
 
     try {
-      const response = await API.post('register/', formData)
+      const response = await API.post('users/register/', formData)
 
       if (response.status === 201 || response.status === 200) {
         setMesaj({ text: 'Kayıt başarılı! Giriş sayfasına yönlendiriliyorsun...', type: 'success' })

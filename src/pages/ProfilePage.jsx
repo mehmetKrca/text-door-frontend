@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import API from '../services/api';
 
 export default function ProfilePage({ onBack }) {
   // --- EKRAN DURUMU ---
@@ -54,9 +54,7 @@ export default function ProfilePage({ onBack }) {
 
       try {
         setLoadingProfile(true);
-        const response = await axios.get('http://127.0.0.1:8001/api/users/me/', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await API.get('users/me/');
 
         if (response.data) {
           const uData = response.data;
@@ -69,10 +67,7 @@ export default function ProfilePage({ onBack }) {
           }));
         }
       } catch (error) {
-        if (error.response && error.response.status === 401) {
-          localStorage.clear();
-          window.location.href = '/login';
-        } else if (error.response && error.response.status === 404) {
+        if (error.response && error.response.status === 404) {
           console.warn("Backend uyarısı: /api/users/me/ endpoint'i bulunamadı (404).");
         } else {
           console.error("Profil bilgileri getirilemedi:", error);
@@ -139,15 +134,13 @@ export default function ProfilePage({ onBack }) {
     }
 
     setSavingPassword(true);
-    const token = getAuthToken();
 
     try {
-      const response = await axios.post('http://127.0.0.1:8001/api/users/password-change/', {
+      const response = await API.post('users/password-change/', {
         old_password: profileData.mevcutSifre,
         new_password: profileData.yeniSifre
       }, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
+        headers: {
           'Content-Type': 'application/json'
         }
       });
@@ -155,16 +148,11 @@ export default function ProfilePage({ onBack }) {
       if (response.status === 200 || response.status === 201) {
         alert("Giriş şifreniz veritabanında başarıyla güncellendi! 🔒");
         setProfileData(prev => ({ ...prev, mevcutSifre: '', yeniSifre: '', yeniSifreTekrar: '' }));
-        setActiveView('settings'); 
+        setActiveView('settings');
       }
     } catch (error) {
-      if (error.response && error.response.status === 401) {
-        localStorage.clear();
-        window.location.href = '/login';
-      } else {
-        const mes = error.response?.data?.error || error.response?.data?.old_password?.[0] || "Mevcut şifrenizi hatalı girdiniz veya bir sorun oluştu.";
-        alert("Hata: " + mes);
-      }
+      const mes = error.response?.data?.error || error.response?.data?.old_password?.[0] || "Mevcut şifrenizi hatalı girdiniz veya bir sorun oluştu.";
+      alert("Hata: " + mes);
     } finally {
       setSavingPassword(false);
     }
@@ -173,22 +161,20 @@ export default function ProfilePage({ onBack }) {
   // 3. DJANGO PROFİL GÜNCELLEME API İSTEĞİ
   const handleProfilGuncelle = async () => {
     setSavingProfile(true);
-    const token = getAuthToken();
 
     const isimParcalari = profileData.adSoyad.trim().split(' ');
     const firstName = isimParcalari[0] || '';
     const lastName = isimParcalari.slice(1).join(' ') || '';
 
     try {
-      const response = await axios.patch('http://127.0.0.1:8001/api/users/profile-update/', {
+      const response = await API.patch('users/profile-update/', {
         first_name: firstName,
         last_name: lastName,
         email: profileData.eposta,
         telefon: profileData.telefon,
         firma_adi: profileData.firmaAdi
       }, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
+        headers: {
           'Content-Type': 'application/json'
         }
       });
@@ -198,13 +184,8 @@ export default function ProfilePage({ onBack }) {
         setActiveView('main');
       }
     } catch (error) {
-      if (error.response && error.response.status === 401) {
-        localStorage.clear();
-        window.location.href = '/login';
-      } else {
-        const errMes = error.response?.data?.email?.[0] || error.response?.data?.telefon?.[0] || "Bilgiler güncellenirken bir sorun oluştu.";
-        alert("Hata: " + errMes);
-      }
+      const errMes = error.response?.data?.email?.[0] || error.response?.data?.telefon?.[0] || "Bilgiler güncellenirken bir sorun oluştu.";
+      alert("Hata: " + errMes);
     } finally {
       setSavingProfile(false);
     }
@@ -231,9 +212,8 @@ export default function ProfilePage({ onBack }) {
         password: calisanData.password
       };
 
-      const response = await axios.post('http://127.0.0.1:8001/api/users/calisan-ekle/', payload, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
+      const response = await API.post('users/calisan-ekle/', payload, {
+        headers: {
           'Content-Type': 'application/json'
         }
       });
@@ -244,14 +224,8 @@ export default function ProfilePage({ onBack }) {
         setActiveView('main');
       }
     } catch (error) {
-      if (error.response && error.response.status === 401) {
-        alert("Oturum süreniz dolmuş. Lütfen tekrar giriş yapın!");
-        localStorage.clear();
-        window.location.href = '/login';
-      } else {
-        const hataMesaji = error.response?.data?.error || error.response?.data?.detail || 'Personel eklenirken bir hata oluştu. E-posta veya telefon önceden kayıtlı olabilir.';
-        alert("Hata: " + hataMesaji);
-      }
+      const hataMesaji = error.response?.data?.error || error.response?.data?.detail || 'Personel eklenirken bir hata oluştu. E-posta veya telefon önceden kayıtlı olabilir.';
+      alert("Hata: " + hataMesaji);
     } finally {
       setCalisanLoading(false);
     }

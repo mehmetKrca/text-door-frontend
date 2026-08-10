@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import API from '../services/api';
-import axios from 'axios';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -42,7 +41,7 @@ export default function LandingPage() {
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        const response = await axios.post('http://127.0.0.1:8001/api/users/google/', {
+        const response = await API.post('users/google/', {
           access_token: tokenResponse.access_token,
         });
 
@@ -172,12 +171,10 @@ export default function LandingPage() {
         form_tipi: formTipi
       };
 
-      await axios.post('http://127.0.0.1:8001/api/users/register/', kayitVerisi, {
-        headers: { 'Authorization': '' }
-      });
+      await API.post('users/register/', kayitVerisi);
 
       try {
-        const loginRes = await axios.post('http://127.0.0.1:8001/api/users/login/', {
+        const loginRes = await API.post('users/login/', {
           username: eposta,
           password: sifre
         });

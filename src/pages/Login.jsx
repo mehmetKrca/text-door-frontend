@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
+import API from '../services/api';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ export default function Login() {
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        const response = await axios.post('http://127.0.0.1:8001/api/users/google/', {
+        const response = await API.post('users/google/', {
           access_token: tokenResponse.access_token,
         });
 
@@ -51,7 +51,7 @@ export default function Login() {
     e.preventDefault();
     if (kullaniciAdi && sifre) {
       try {
-        const response = await axios.post('http://127.0.0.1:8001/api/users/login/', {
+        const response = await API.post('users/login/', {
           username: kullaniciAdi,
           password: sifre
         });
@@ -75,7 +75,7 @@ export default function Login() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://127.0.0.1:8001/api/users/register/', {
+      const response = await API.post('users/register/', {
         username: kullaniciAdi,
         email: kullaniciAdi,
         password: sifre,
