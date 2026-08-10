@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGoogleLogin } from '@react-oauth/google';
 import API from '../services/api';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Login() {
   const navigate = useNavigate();
-  
+  const { giris } = useAuth();
+
   // --- EKRAN GEÇİŞ STATE'İ (Giriş Yap / Kayıt Ol) ---
   const [isLoginModu, setIsLoginModu] = useState(true);
 
@@ -26,11 +28,8 @@ export default function Login() {
           access_token: tokenResponse.access_token,
         });
 
-        localStorage.setItem('access_token', response.data.access);
-        if (response.data.refresh) {
-          localStorage.setItem('refresh_token', response.data.refresh);
-        }
-        
+        await giris(response.data.access, response.data.refresh);
+
         alert("Tebrikler kanka! eWindoore'ya Google ile başarıyla giriş yaptık! 🚀");
         navigate('/cizim');
 
@@ -56,10 +55,7 @@ export default function Login() {
           password: sifre
         });
 
-        localStorage.setItem('access_token', response.data.access);
-        if (response.data.refresh) {
-          localStorage.setItem('refresh_token', response.data.refresh);
-        }
+        await giris(response.data.access, response.data.refresh);
         navigate('/cizim');
         
       } catch (error) {
@@ -85,10 +81,7 @@ export default function Login() {
       });
 
       if (response.data.access) {
-        localStorage.setItem('access_token', response.data.access);
-        if (response.data.refresh) {
-          localStorage.setItem('refresh_token', response.data.refresh);
-        }
+        await giris(response.data.access, response.data.refresh);
       }
 
       alert(`Harika kanka! "${firmaAdi}" hesabın başarıyla oluşturuldu ve içeri giriyoruz! 🚀`);

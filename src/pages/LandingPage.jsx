@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import API from '../services/api';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { giris } = useAuth();
 
   // --- FORM STATE'LERİ ---
   const [formTipi, setFormTipi] = useState('bireysel');
@@ -45,12 +47,7 @@ export default function LandingPage() {
           access_token: tokenResponse.access_token,
         });
 
-        if (response.data.access) {
-          localStorage.setItem('access_token', response.data.access);
-        }
-        if (response.data.refresh) {
-          localStorage.setItem('refresh_token', response.data.refresh);
-        }
+        await giris(response.data.access, response.data.refresh);
 
         alert("Tebrikler! eWindoore'ya Google ile başarıyla giriş yapıldı! 🚀");
         navigate('/cizim');
@@ -180,10 +177,7 @@ export default function LandingPage() {
         });
 
         if (loginRes.data && loginRes.data.access) {
-          localStorage.setItem('access_token', loginRes.data.access);
-          if (loginRes.data.refresh) {
-            localStorage.setItem('refresh_token', loginRes.data.refresh);
-          }
+          await giris(loginRes.data.access, loginRes.data.refresh);
         }
       } catch (loginErr) {
         console.warn("Otomatik login es geçildi:", loginErr);

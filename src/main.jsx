@@ -7,6 +7,8 @@ import './styles/base.css'
 import './index.css'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import { GoogleOAuthProvider } from '@react-oauth/google'
+import { ThemeProvider } from './context/ThemeContext.jsx'
+import { AuthProvider } from './context/AuthContext.jsx'
 
 // Google Cloud Client ID:
 const CLIENT_ID = "273557532184-h6b4637fd9tl8tu5j61lndvf1ag3v7j8.apps.googleusercontent.com";
@@ -15,7 +17,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <GoogleOAuthProvider clientId={CLIENT_ID}>
       <BrowserRouter>
-        <App />
+        <ThemeProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </ThemeProvider>
       </BrowserRouter>
     </GoogleOAuthProvider>
   </React.StrictMode>,

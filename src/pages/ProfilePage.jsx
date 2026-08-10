@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import API from '../services/api';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export default function ProfilePage({ onBack }) {
+  const { cikis } = useAuth();
   // --- EKRAN DURUMU ---
   const [activeView, setActiveView] = useState('main'); 
   const [modalIcerik, setModalIcerik] = useState(null);
@@ -90,7 +92,7 @@ export default function ProfilePage({ onBack }) {
 
   const handleCikisYap = () => {
     if (window.confirm("Hesabınızdan çıkış yapmak istediğinize emin misiniz?")) {
-      localStorage.clear();
+      cikis();
       window.location.href = '/login';
     }
   };

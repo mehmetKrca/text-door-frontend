@@ -2,7 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Register from './pages/Register'
 import Login from './pages/Login'
 import LandingPage from './pages/LandingPage'
-import PvcCizimEkrani from './PvcCizimEkrani' 
+import PvcCizimEkrani from './PvcCizimEkrani'
+import { useAuth } from './context/AuthContext.jsx'
 
 // --- YENİ EKLENEN YASAL SÖZLEŞME SAYFALARI ---
 import GizlilikSozlesmesi from './pages/GizlilikSozlesmesi'
@@ -10,9 +11,13 @@ import KullaniciSozlesmesi from './pages/KullaniciSozlesmesi'
 
 // --- GÜVENLİK DUVARI (KORUMALI ROTA) BİLEŞENİ ---
 const KorumaliRota = ({ children }) => {
-  const token = localStorage.getItem('access_token');
-  
-  if (!token) {
+  const { girisYapildiMi, yukleniyor } = useAuth();
+
+  if (yukleniyor) {
+    return <div>Yükleniyor...</div>;
+  }
+
+  if (!girisYapildiMi) {
     return <Navigate to="/login" replace />;
   }
   return children;

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import API, { getAbonelikDurumu, abonelikBaslat } from './services/api';
 import ProfilePage from './pages/ProfilePage';
+import { useAuth } from './context/AuthContext.jsx';
 
 // 🎯 TOKEN ALMA YARDIMCI FONKSİYONU
 const getAuthToken = () => {
@@ -13,6 +14,7 @@ const getAuthToken = () => {
 export default function PvcCizimEkrani() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { cikis } = useAuth();
 
   const [aktifSekme, setAktifSekme] = useState(() => {
     if (sessionStorage.getItem('return_to_profil') === 'true') {
@@ -284,9 +286,7 @@ export default function PvcCizimEkrani() {
 
   const handleCikisYap = () => {
     if (window.confirm("Hesabınızdan çıkış yapmak istediğinize emin misiniz?")) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('bayiMusteriArsivi'); 
+      cikis();
       navigate('/login');
     }
   };
