@@ -386,7 +386,13 @@ export function hesaplaSineklik(g, t) {
   if (en > 4000 || boy > 4000) uyarilar.push('Ölçüler çok büyük görünüyor — kontrol edin.');
 
   const tepeAdimi = Math.min(Math.max(sayi(t?.tepeAdimiMM, 20), 5), 100);
-  const tepeSayisi = boy > 0 ? Math.ceil(boy / tepeAdimi) : 0;
+
+  /* Kıvırımlar hangi yöne katlanıyorsa tepe sayısı o ölçüden çıkar:
+       dikey açılan (aşağı inen)  → boy ÷ adım
+       yatay açılan (yana çekilen) → en  ÷ adım               */
+  const acilimYonu = g.acilimYonu === 'yatay' ? 'yatay' : 'dikey';
+  const tepeOlcusu = acilimYonu === 'yatay' ? en : boy;
+  const tepeSayisi = tepeOlcusu > 0 ? Math.ceil(tepeOlcusu / tepeAdimi) : 0;
 
   const cerceveM = (2 * (en + boy)) / 1000;
   const kumasM2 = (en * boy) / 1e6;
@@ -396,7 +402,7 @@ export function hesaplaSineklik(g, t) {
     return {
       gecerli: false,
       uyarilar: ['Bu ürün için fiyat tanımlı değil. Fiyat Ayarları bölümünü kontrol edin.'],
-      tepeSayisi, metraj: null, teklifDetay: { toplam: 0, birimFiyat: 0 },
+      tepeSayisi, acilimYonu, metraj: null, teklifDetay: { toplam: 0, birimFiyat: 0 },
     };
   }
 
@@ -439,7 +445,9 @@ export function hesaplaSineklik(g, t) {
 
     olculer: { genislik: en, yukseklik: boy, adet },
 
+    acilimYonu,
     tepeAdimi,
+    tepeOlcusu,
     tepeSayisi,
     tepeSayisiToplam: tepeSayisi * adet,
 

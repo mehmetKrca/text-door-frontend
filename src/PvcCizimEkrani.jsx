@@ -217,6 +217,7 @@ export default function PvcCizimEkrani() {
   const [spGenislik, setSpGenislik] = useState(800);
   const [spYukseklik, setSpYukseklik] = useState(2000);
   const [spAdet, setSpAdet] = useState(1);
+  const [spAcilimYonu, setSpAcilimYonu] = useState('dikey');
 
   const [aktifRenkSekmesi, setAktifRenkSekmesi] = useState('beyaz');
   
@@ -377,9 +378,10 @@ export default function PvcCizimEkrani() {
       yukseklik: spYukseklik,
       adet: spAdet,
       tip: spTipi,
+      acilimYonu: spAcilimYonu,
     };
     return hesaplaSineklik(girdi, fiyatTablo);
-  }, [spGenislik, spYukseklik, spAdet, spTipi, fiyatTablo]);
+  }, [spGenislik, spYukseklik, spAdet, spTipi, spAcilimYonu, fiyatTablo]);
 
   const sepetGenelToplam = useMemo(() => sepet.reduce((acc, kalem) => acc + (Number(kalem.fiyat) || 0), 0), [sepet]);
   const sepetToplamAdet = useMemo(() => sepet.reduce((acc, kalem) => acc + (Number(kalem.adet) || 1), 0), [sepet]);
@@ -435,6 +437,7 @@ export default function PvcCizimEkrani() {
       adet: Number(spAdet) || 1,
       renk: 'Standart',
       renkIsmi: 'Standart',
+      acilimYonu: spAcilimYonu,
       tepeSayisi: sineklikSonucu.tepeSayisi,
       fiyat: Math.ceil(anlikTutar)
     };
@@ -578,7 +581,7 @@ export default function PvcCizimEkrani() {
   const handleKalemiDuzenle = (kalem) => {
     setDuzenlenenKalemId(kalem.id); setKalemAdi(kalem.isim);
     if (SP_URUN_TIPLERI_TUMU.includes(kalem.urunTipi)) {
-      setSpTipi(spTipiDonustur(kalem.urunTipi)); setSpGenislik(kalem.genislik || 800); setSpYukseklik(kalem.yukseklik || 2000); setSpAdet(kalem.adet || 1); handleSekmeDegistir('sineklik');
+      setSpTipi(spTipiDonustur(kalem.urunTipi)); setSpGenislik(kalem.genislik || 800); setSpYukseklik(kalem.yukseklik || 2000); setSpAdet(kalem.adet || 1); setSpAcilimYonu(kalem.acilimYonu === 'yatay' ? 'yatay' : 'dikey'); handleSekmeDegistir('sineklik');
     } else {
       setUrunTipi(kalem.urunTipi); setGenislik(kalem.genislik); setYukseklik(kalem.yukseklik); setSagYukseklik(kalem.sagYukseklik || 1600); setBolmeSayisi(kalem.bolmeSayisi); setKanatlar(kalem.kanatlar); setBolmeOlculeri(kalem.bolmeOlculeri || Array(kalem.bolmeSayisi).fill(0)); setRenk(kalem.renk); setCamTipi(camTipiDonustur(kalem.camTipi)); setAltPanelLambiri(kalem.altPanelLambiri !== undefined ? kalem.altPanelLambiri : true); setEnineBolmeVar(kalem.enineBolmeVar || false); setEnineBolmeYerdenYukseklik(kalem.enineBolmeYerdenYukseklik || 800); setLambiriBoyu(kalem.lambiriBoyu || 800); setProfilSerisi(kalem.profilSerisi || 70); setAciModu(kalem.aciModu || 'aci_bul'); setManuelAci(kalem.manuelAci || 20); setEgimYonu(kalem.egimYonu || 'saga_yukselir'); handleSekmeDegistir('cizim');
     }
@@ -1050,6 +1053,12 @@ export default function PvcCizimEkrani() {
                   <label style={{ flex: '0.6', fontSize: '12px' }}>Adet: <input type="number" value={spAdet} onChange={e => setSpAdet(e.target.value === '' ? '' : Number(e.target.value))} style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/></label>
                 </div>
 
+                <h4 style={{ margin: '0 0 6px 0', color: '#1E3A8A', fontSize: '13px' }}>2. Açılım Yönü</h4>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                  <button type="button" onClick={() => setSpAcilimYonu('dikey')} style={{ flex: 1, padding: '8px', backgroundColor: spAcilimYonu === 'dikey' ? '#1E3A8A' : '#f1f5f9', color: spAcilimYonu === 'dikey' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Dikey Açılım</button>
+                  <button type="button" onClick={() => setSpAcilimYonu('yatay')} style={{ flex: 1, padding: '8px', backgroundColor: spAcilimYonu === 'yatay' ? '#1E3A8A' : '#f1f5f9', color: spAcilimYonu === 'yatay' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Yatay Açılım</button>
+                </div>
+
                 <div style={{ padding: '8px', backgroundColor: '#eff6ff', color: '#1E3A8A', borderRadius: '4px', fontSize: '11px', borderLeft: '3px solid #1E3A8A' }}>
                   Not: Bu ürünlerde profil rengi fiyatı etkilemez.
                 </div>
@@ -1064,6 +1073,9 @@ export default function PvcCizimEkrani() {
                   </div>
                   <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
                     Kıvırım (tepe) sayısı: <strong style={{ color: '#1E3A8A' }}>{sineklikSonucu.tepeSayisi ?? 0}</strong> adet
+                  </div>
+                  <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '2px' }}>
+                    {sineklikSonucu.tepeSayisi ?? 0} tepe {spAcilimYonu === 'yatay' ? 'en' : 'boy'} {sineklikSonucu.tepeOlcusu ?? 0}mm üzerinden
                   </div>
                 </div>
 

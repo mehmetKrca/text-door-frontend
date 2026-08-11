@@ -440,6 +440,51 @@ console.log('\nTEST 16 — sineklikte bozuk girdi dayanıklılığı');
   dogru('tablo eksikse uyarı verir, çökmez', s.gecerli === false && s.uyarilar.length > 0);
 }
 
+
+/* ============================================================
+   TEST 17 — TEPE SAYISI AÇILIM YÖNÜNE GÖRE HESAPLANIR
+   ============================================================
+   700 × 2000, tepe adımı 20 mm
+     dikey açılım → 2000 / 20 = 100 tepe
+     yatay açılım →  700 / 20 =  35 tepe
+*/
+console.log('\nTEST 17 — açılım yönü tepe sayısını değiştirir');
+{
+  const ortak = { tip: 'plisePerde', genislik: 700, yukseklik: 2000, adet: 1 };
+
+  const dikey = hesaplaSineklik({ ...ortak, acilimYonu: 'dikey' }, T);
+  const yatay = hesaplaSineklik({ ...ortak, acilimYonu: 'yatay' }, T);
+  const varsayilan = hesaplaSineklik({ ...ortak }, T);
+
+  esit('dikey → 100 tepe', dikey.tepeSayisi, 100);
+  esit('yatay → 35 tepe', yatay.tepeSayisi, 35);
+  esit('varsayılan dikey', varsayilan.tepeSayisi, 100);
+  esit('dikey ölçüsü boy', dikey.tepeOlcusu, 2000);
+  esit('yatay ölçüsü en', yatay.tepeOlcusu, 700);
+
+  dogru('yatayda tepe maliyeti daha az', yatay.maliyet.tepe < dikey.maliyet.tepe);
+  esit('yatay tepe tutarı 420 ₺', yatay.maliyet.tepe, 420, 2);
+
+  // çerçeve ve kumaş yönden etkilenmemeli
+  esit('çerçeve aynı', yatay.metraj.cerceveM, dikey.metraj.cerceveM, 0.001);
+  esit('kumaş aynı', yatay.metraj.kumasM2, dikey.metraj.kumasM2, 0.001);
+
+  // geçersiz yön dikey sayılır
+  const bozukYon = hesaplaSineklik({ ...ortak, acilimYonu: 'saçma' }, T);
+  esit('geçersiz yön dikey olur', bozukYon.tepeSayisi, 100);
+}
+
+console.log('\nTEST 18 — üç tipte de yön çalışıyor');
+{
+  ['menteseliSineklik', 'surguluSineklik', 'plisePerde'].forEach((tip) => {
+    const d = hesaplaSineklik({ tip, genislik: 700, yukseklik: 2000, acilimYonu: 'dikey' }, T);
+    const y = hesaplaSineklik({ tip, genislik: 700, yukseklik: 2000, acilimYonu: 'yatay' }, T);
+    esit(`${tip} dikey 100 tepe`, d.tepeSayisi, 100);
+    esit(`${tip} yatay 35 tepe`, y.tepeSayisi, 35);
+    dogru(`${tip} yatayda daha ucuz`, y.maliyet.birimHam < d.maliyet.birimHam);
+  });
+}
+
 /* ============================================================
    ÖZET
    ============================================================ */
