@@ -6,6 +6,7 @@ import { useAuth } from './context/AuthContext.jsx';
 import { hesapla, hesaplaSineklik } from './utils/fiyatHesapla.js';
 import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI, sineklikRenkVarMi } from './utils/fiyatTablosu.js';
 import DogramaCizim from './components/DogramaCizim.jsx';
+import TeklifYazdir from './components/TeklifYazdir.jsx';
 
 // 🎯 TOKEN ALMA YARDIMCI FONKSİYONU
 const getAuthToken = () => {
@@ -649,21 +650,12 @@ export default function PvcCizimEkrani() {
 
   return (
     <div className="ana-konteyner" style={{ position: 'relative', minHeight: '100vh', fontFamily: 'sans-serif', color: '#1E3A8A', backgroundColor: '#f8fafc', width: '100%', overflowX: 'hidden' }}>
-      
+
       {/* 🎯 SIFIR TAŞMA & MOBİL/DESKTOP STİLLERİ */}
       <style>{`
         * { box-sizing: border-box !important; }
         html, body { overflow-x: hidden !important; width: 100% !important; margin: 0; padding: 0; }
-        
-        @media print {
-          .no-print { display: none !important; }
-          .print-only { display: block !important; }
-          body { background-color: white; color: black; margin: 0; padding: 0; }
-          @page { margin: 15mm; }
-          .fatura-cerceve { border: 1px solid #ccc; padding: 20px; border-radius: 8px; }
-        }
-        @media screen { .print-only { display: none !important; } }
-        
+
         /* 📱 MOBİL DÜZEN */
         @media screen and (max-width: 768px) {
           .ana-kapsayici { padding: 10px !important; width: 100% !important; }
@@ -691,7 +683,7 @@ export default function PvcCizimEkrani() {
 
       {/* BANT 1: BİLDİRİM BANNERI */}
       {!abonelikAktif && erisimIzni && (
-        <div className="no-print" style={{ backgroundColor: '#1E3A8A', color: '#ffffff', padding: '8px 10px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold', width: '100%' }}>
+        <div style={{ backgroundColor: '#1E3A8A', color: '#ffffff', padding: '8px 10px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold', width: '100%' }}>
           ⚡ eWindoore 14 Günlük Ücretsiz Deneme. Kalan Süreniz: <span style={{ color: '#93c5fd' }}>{kalanDenemeGunu} Gün</span>
         </div>
       )}
@@ -699,89 +691,9 @@ export default function PvcCizimEkrani() {
       {/* ANA KAPSAYICI */}
       <div className="ana-kapsayici" style={{ padding: '16px', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box', filter: !erisimIzni ? 'blur(6px)' : 'none', pointerEvents: !erisimIzni ? 'none' : 'auto' }}>
 
-      {/* KURUMSAL FATURA ALANI */}
-      <div className="print-only fatura-cerceve" style={{ width: '100%', minHeight: '100vh', position: 'relative', paddingBottom: '80px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #1E3A8A', paddingBottom: '20px', marginBottom: '30px' }}>
-          <div>
-            <h2 style={{ margin: '0 0 10px 0', color: '#1E3A8A', fontSize: '28px', textTransform: 'uppercase', letterSpacing: '2px' }}>PROFORMA FATURA</h2>
-            <p style={{ margin: '3px 0', fontSize: '14px' }}><strong>Sayın / Firma:</strong> {projeAdi || 'Belirtilmedi'}</p>
-            <p style={{ margin: '3px 0', fontSize: '14px' }}><strong>Telefon:</strong> {musteriTel || 'Belirtilmedi'}</p>
-            <p style={{ margin: '3px 0', fontSize: '14px' }}><strong>Adres:</strong> {musteriAdres || 'Belirtilmedi'}</p>
-            <p style={{ margin: '3px 0', fontSize: '14px' }}><strong>Tarih:</strong> {teklifTarihi}</p>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            {firmaLogosu && <img src={firmaLogosu} alt="Firma Logosu" style={{ maxHeight: '80px', marginBottom: '10px' }} />}
-            <h1 style={{ margin: '0', fontSize: '24px', color: '#1E3A8A', fontWeight: '900' }}>{firmaAdi}</h1>
-            {kurumsalIban && <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#555' }}><strong>Banka IBAN:</strong> {kurumsalIban}</p>}
-          </div>
-        </div>
-
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A', borderBottom: '2px solid #bfdbfe' }}>
-              <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px' }}>No</th>
-              <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px' }}>Ürün / Açıklama</th>
-              <th style={{ padding: '12px', textAlign: 'center', fontSize: '14px' }}>Sistem & Renk</th>
-              <th style={{ padding: '12px', textAlign: 'center', fontSize: '14px' }}>Ölçü (En x Boy)</th>
-              <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>Tutar</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sepet.length > 0 ? sepet.map((item, index) => (
-              <tr key={index} style={{ borderBottom: '1px solid #e0e0e0' }}>
-                <td style={{ padding: '12px', fontSize: '14px', color: '#555' }}>{index + 1}</td>
-                <td style={{ padding: '12px', fontSize: '14px' }}>
-                  <strong style={{ color: '#1E3A8A' }}>{item.isim}</strong>
-                  {item.adet > 1 && <span style={{ color: '#1E3A8A', fontWeight: 'bold', marginLeft: '5px' }}>(x{item.adet})</span>}
-                </td>
-                <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: '#555' }}>
-                  {item.urunTipi.replace('_', ' ').toUpperCase()} <br/>
-                  {item.renkIsmi || item.renk}
-                </td>
-                <td style={{ padding: '12px', textAlign: 'center', fontSize: '14px', color: '#333' }}>
-                  {item.genislik} x {item.yukseklik} mm
-                </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold', color: '#1E3A8A' }}>
-                  {Math.ceil(Number(item.fiyat) || 0).toLocaleString('tr-TR')} ₺
-                </td>
-              </tr>
-            )) : (
-              <tr>
-                <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: '#777' }}>Henüz ürün eklenmedi.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #1E3A8A', paddingTop: '15px' }}>
-          <div style={{ width: '55%' }}>
-            {siparisNotu && (
-              <>
-                <strong style={{ color: '#1E3A8A', fontSize: '14px' }}>Siparişe Özel Notlar:</strong>
-                <p style={{ fontSize: '13px', color: '#555', marginTop: '5px', padding: '10px', backgroundColor: '#fafafa', border: '1px solid #eee', borderRadius: '4px' }}>
-                  {siparisNotu}
-                </p>
-              </>
-            )}
-          </div>
-          <div style={{ width: '40%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '18px' }}>
-              <strong style={{ color: '#1E3A8A' }}>Teklif Genel Toplamı:</strong>
-              <strong style={{ color: '#1E3A8A', fontSize: '22px' }}>{Math.ceil(sepetGenelToplam).toLocaleString('tr-TR')} ₺</strong>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ position: 'fixed', bottom: '0', left: '0', width: '100%', textAlign: 'center', borderTop: '1px solid #cfd8dc', paddingTop: '15px', paddingBottom: '10px', backgroundColor: 'white' }}>
-          <span style={{ fontSize: '11px', color: '#78909c' }}>
-            Bu fatura dijital olarak <strong style={{ color: '#1E3A8A', letterSpacing: '4px', fontSize: '13px' }}>eWindoore</strong> yazılım altyapısı kullanılarak oluşturulmuştur.
-          </span>
-        </div>
-      </div>
-
       {/* NORMAL UYGULAMA PANELİ */}
-      <div className="no-print">
-        
+      <div>
+
         {/* HEADER */}
         <div className="baslik-kapsayici" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #cbd5e1', paddingBottom: '10px', marginBottom: '14px' }}>
           <h2 className="baslik-yazisi" style={{ margin: 0, color: '#1E3A8A', fontSize: '20px', fontWeight: '900' }}>eWindoore Dijital Çizim Sistemi</h2>
@@ -1504,6 +1416,19 @@ export default function PvcCizimEkrani() {
           </div>
         </div>
       )}
+
+      <TeklifYazdir
+        firmaAdi={firmaAdi}
+        firmaLogosu={firmaLogosu}
+        iban={kurumsalIban}
+        projeAdi={projeAdi}
+        musteriTel={musteriTel}
+        musteriAdres={musteriAdres}
+        siparisNotu={siparisNotu}
+        teklifTarihi={teklifTarihi}
+        sepet={sepet}
+        kdvDahilMi={kdvEkle}
+      />
 
     </div>
   );

@@ -45,6 +45,8 @@ export default function DogramaCizim({
   tuvalGenisligi = 700,
   tuvalYuksekligi = 460,
   olcuGoster = true,
+  camEtiketGoster = true,   // müşteriye giden teklifte cam kesim ölçüleri gizlenir
+  etiketGoster = true,      // sağ alttaki teknik etiket
 }) {
   const renk = PROFIL_RENKLERI[renkId] || PROFIL_RENKLERI.beyaz;
   const isKapi = ['kapi', 'wc_kapi', 'balkonkapi', 'fransiz'].includes(urunTipi);
@@ -169,6 +171,7 @@ export default function DogramaCizim({
     genislik, yukseklik, sagYukseklik, bolmeSayisi, bolmeGenislikleri,
     kanatlar, profilSerisi, lambiriVar, lambiriBoyu, enineBolmeVar,
     enineBolmeYuksekligi, urunTipi, tuvalGenisligi, tuvalYuksekligi, olcuGoster,
+    camEtiketGoster, etiketGoster,
   ]);
 
   const {
@@ -217,7 +220,7 @@ export default function DogramaCizim({
             <rect x={x} y={y} width={w} height={h} fill="none" stroke="#4a545f" strokeWidth="1.4" />
           </>
         )}
-        {w > 52 && h > 34 && (
+        {camEtiketGoster && w > 52 && h > 34 && (
           <g>
             <rect x={x + w / 2 - 31} y={y + h / 2 - 13} width="62" height="26" rx="3"
               fill="#ffffff" opacity="0.88" stroke="#c8d3e0" strokeWidth="0.6" />
@@ -247,7 +250,7 @@ export default function DogramaCizim({
             </g>
           );
         })}
-        {w > 52 && h > 28 && (
+        {camEtiketGoster && w > 52 && h > 28 && (
           <g>
             <rect x={x + w / 2 - 30} y={y + h / 2 - 8} width="60" height="16" rx="3"
               fill="#ffffff" opacity="0.9" stroke="#c8d3e0" strokeWidth="0.6" />
@@ -578,6 +581,7 @@ export default function DogramaCizim({
       )}
 
       {/* ================= TEKNİK ETİKET ================= */}
+      {etiketGoster && (
       <g>
         <line x1={TW - 220} y1={TH - 44} x2={TW - 12} y2={TH - 44} stroke="#c8d3e0" strokeWidth="0.9" />
         <text x={TW - 12} y={TH - 31} textAnchor="end" fontSize="8.8" fill="#7d8b9e"
@@ -596,6 +600,7 @@ export default function DogramaCizim({
           ÖLÇÜLER mm · DIŞTAN GÖRÜNÜŞ · ÖLÇEK 1:{Math.max(1, Math.round(1 / olcek))}
         </text>
       </g>
+      )}
     </svg>
   );
 }
