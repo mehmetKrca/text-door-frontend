@@ -56,10 +56,14 @@ export function AuthProvider({ children }) {
     setKullanici(null);
   }, []);
 
+  const rol = kullanici?.rol || null;
+
   const value = {
     kullanici,
     yukleniyor,
     girisYapildiMi: !!kullanici,
+    rol,
+    patronMu: rol === 'patron',
     giris,
     cikis,
   };

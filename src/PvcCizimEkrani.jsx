@@ -31,7 +31,7 @@ const SP_URUN_TIPLERI_TUMU = ['menteseliSineklik', 'surguluSineklik', 'plisePerd
 export default function PvcCizimEkrani() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { cikis } = useAuth();
+  const { cikis, patronMu } = useAuth();
 
   const [aktifSekme, setAktifSekme] = useState(() => {
     if (sessionStorage.getItem('return_to_profil') === 'true') {
@@ -51,8 +51,6 @@ export default function PvcCizimEkrani() {
       localStorage.setItem('eWindoore_aktif_sekme', sekmeAdi);
     }
   };
-
-  const [aktifRol, setAktifRol] = useState('patron');
 
   // --- ABONELİK VE PAYWALL STATE'LERİ ---
   const [erisimIzni, setErisimIzni] = useState(true);
@@ -101,10 +99,10 @@ export default function PvcCizimEkrani() {
   };
 
   useEffect(() => {
-    if (aktifRol === 'usta' && ['patron', 'calisan_ekle'].includes(aktifSekme)) {
+    if (!patronMu && ['patron', 'fiyatlar', 'calisan_ekle'].includes(aktifSekme)) {
       handleSekmeDegistir('cizim');
     }
-  }, [aktifRol, aktifSekme]);
+  }, [patronMu, aktifSekme]);
 
   // --- MÜŞTERİ ARŞİVİ VE BULUT SENKRONİZASYONU ---
   const [projeAdi, setProjeAdi] = useState('');
@@ -653,17 +651,11 @@ export default function PvcCizimEkrani() {
           <h2 className="baslik-yazisi" style={{ margin: 0, color: '#1E3A8A', fontSize: '20px', fontWeight: '900' }}>eWindoore Dijital Çizim Sistemi</h2>
           
           <div className="ust-sag-aksiyonlar" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <div style={{ backgroundColor: '#ffffff', padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
-              <span style={{ color: '#1E3A8A', fontWeight: 'bold' }}>Gözlem Modu:</span>
-              <select value={aktifRol} onChange={(e) => setAktifRol(e.target.value)} style={{ border: 'none', background: 'transparent', fontWeight: 'bold', color: '#1E3A8A', cursor: 'pointer', outline: 'none' }}>
-                <option value="patron">👑 Patron Arayüzü</option>
-                <option value="usta">👷‍♂️ Usta / Personel Arayüzü</option>
-              </select>
-            </div>
-
-            <button onClick={handlePDFIndir} style={{ padding: '6px 10px', backgroundColor: '#1E3A8A', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>
-              Kurumsal PDF 🖨️
-            </button>
+            {patronMu && (
+              <button onClick={handlePDFIndir} style={{ padding: '6px 10px', backgroundColor: '#1E3A8A', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>
+                Kurumsal PDF 🖨️
+              </button>
+            )}
 
             <div 
               onClick={() => handleSekmeDegistir('profil')} 
@@ -681,9 +673,11 @@ export default function PvcCizimEkrani() {
           <button className="sekme-buton" onClick={() => handleSekmeDegistir('cizim')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'cizim' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'cizim' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Doğrama ve Çizim</button>
           <button className="sekme-buton" onClick={() => handleSekmeDegistir('sineklik')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'sineklik' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'sineklik' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Sineklik ve Perde</button>
           <button className="sekme-buton" onClick={() => handleSekmeDegistir('sepet')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'sepet' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'sepet' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Sipariş Sepeti ({sepetToplamAdet})</button>
-          <button className="sekme-buton" onClick={() => handleSekmeDegistir('fiyatlar')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'fiyatlar' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'fiyatlar' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Fiyat Ayarları</button>
+          {patronMu && (
+            <button className="sekme-buton" onClick={() => handleSekmeDegistir('fiyatlar')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'fiyatlar' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'fiyatlar' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Fiyat Ayarları</button>
+          )}
           <button className="sekme-buton" onClick={() => handleSekmeDegistir('arsiv')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'arsiv' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'arsiv' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>📑 CRM Arşiv</button>
-          {aktifRol === 'patron' && (
+          {patronMu && (
             <button className="sekme-buton" onClick={() => handleSekmeDegistir('patron')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'patron' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'patron' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>📊 Patron Özeti</button>
           )}
         </div>
@@ -843,54 +837,58 @@ export default function PvcCizimEkrani() {
 
             {/* MALİYET KUTUSU */}
             <div className="mobil-tam-genislik" style={{ padding: '14px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
-              <h3 style={{ margin: '0 0 8px 0', color: '#1E3A8A', fontSize: '15px', borderBottom: '1px solid #eee', paddingBottom: '6px' }}>Maliyet & Teklif Hesabı</h3>
+              {patronMu && (
+                <>
+                  <h3 style={{ margin: '0 0 8px 0', color: '#1E3A8A', fontSize: '15px', borderBottom: '1px solid #eee', paddingBottom: '6px' }}>Maliyet & Teklif Hesabı</h3>
 
-              <div style={{ marginBottom: '10px', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>Saf Malzeme / İmalat Maliyeti:</div>
-                <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#1E3A8A', marginTop: '2px' }}>
-                  {hamImalatMaliyeti.toLocaleString('tr-TR')} ₺
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: '#eff6ff', padding: '10px', borderRadius: '6px', border: '1px solid #bfdbfe', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <strong style={{ fontSize: '11px', color: '#1E3A8A' }}>🛠️ Usta / Bayi Marj Ayarları (TL)</strong>
-                
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: '10px', color: '#555', display: 'block' }}>Kâr Marjı (TL):</label>
-                    <input 
-                      type="number" 
-                      value={ustaKarTL} 
-                      onChange={e => setUstaKarTL(e.target.value === '' ? '' : Number(e.target.value))} 
-                      placeholder="800" 
-                      style={{ width: '100%', padding: '6px', border: '1px solid #1E3A8A', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}
-                    />
+                  <div style={{ marginBottom: '10px', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>Saf Malzeme / İmalat Maliyeti:</div>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#1E3A8A', marginTop: '2px' }}>
+                      {hamImalatMaliyeti.toLocaleString('tr-TR')} ₺
+                    </div>
                   </div>
 
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: '10px', color: '#555', display: 'block' }}>Montaj Payı (TL):</label>
-                    <input 
-                      type="number" 
-                      value={montajPayiTL} 
-                      onChange={e => setMontajPayiTL(e.target.value === '' ? '' : Number(e.target.value))} 
-                      placeholder="500" 
-                      style={{ width: '100%', padding: '6px', border: '1px solid #1E3A8A', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}
-                    />
+                  <div style={{ backgroundColor: '#eff6ff', padding: '10px', borderRadius: '6px', border: '1px solid #bfdbfe', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <strong style={{ fontSize: '11px', color: '#1E3A8A' }}>🛠️ Usta / Bayi Marj Ayarları (TL)</strong>
+
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '10px', color: '#555', display: 'block' }}>Kâr Marjı (TL):</label>
+                        <input
+                          type="number"
+                          value={ustaKarTL}
+                          onChange={e => setUstaKarTL(e.target.value === '' ? '' : Number(e.target.value))}
+                          placeholder="800"
+                          style={{ width: '100%', padding: '6px', border: '1px solid #1E3A8A', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '10px', color: '#555', display: 'block' }}>Montaj Payı (TL):</label>
+                        <input
+                          type="number"
+                          value={montajPayiTL}
+                          onChange={e => setMontajPayiTL(e.target.value === '' ? '' : Number(e.target.value))}
+                          placeholder="500"
+                          style={{ width: '100%', padding: '6px', border: '1px solid #1E3A8A', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold', color: '#1E3A8A' }}>
+                      <input type="checkbox" checked={kdvEkle} onChange={e => setKdvEkle(e.target.checked)} />
+                      %20 KDV Dahil Et
+                    </label>
                   </div>
-                </div>
 
-                <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold', color: '#1E3A8A' }}>
-                  <input type="checkbox" checked={kdvEkle} onChange={e => setKdvEkle(e.target.checked)} />
-                  %20 KDV Dahil Et
-                </label>
-              </div>
-
-              <div style={{ marginBottom: '12px', backgroundColor: '#eff6ff', padding: '10px', borderRadius: '6px', border: '1px solid #93c5fd' }}>
-                <div style={{ fontSize: '11px', color: '#1E3A8A', fontWeight: 'bold' }}>Müşteriye Verilecek Teklif:</div>
-                <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#1E3A8A', marginTop: '2px' }}>
-                  {Math.ceil(anlikGenelToplam).toLocaleString('tr-TR')} ₺
-                </div>
-              </div>
+                  <div style={{ marginBottom: '12px', backgroundColor: '#eff6ff', padding: '10px', borderRadius: '6px', border: '1px solid #93c5fd' }}>
+                    <div style={{ fontSize: '11px', color: '#1E3A8A', fontWeight: 'bold' }}>Müşteriye Verilecek Teklif:</div>
+                    <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#1E3A8A', marginTop: '2px' }}>
+                      {Math.ceil(anlikGenelToplam).toLocaleString('tr-TR')} ₺
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div style={{ marginBottom: '10px' }}>
                 <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '12px' }}>Sipariş Odası / Adı:</label>
@@ -944,19 +942,23 @@ export default function PvcCizimEkrani() {
               </div>
 
               <div className="mobil-tam-genislik" style={{ padding: '14px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', flex: '1', minWidth: '240px' }}>
-                <h3 style={{ margin: '0 0 8px 0', color: '#1E3A8A', fontSize: '14px', borderBottom: '1px solid #eee', paddingBottom: '6px' }}>Maliyet Hesabı</h3>
-                <div style={{ marginBottom: '12px', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '12px', color: '#666' }}>Toplam Tutar ({spAdet} Adet):</div>
-                  <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#1E3A8A', marginTop: '2px' }}>
-                    {(sineklikSonucu.teklifDetay?.toplam ?? 0).toLocaleString('tr-TR')} ₺
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-                    Kıvırım (tepe) sayısı: <strong style={{ color: '#1E3A8A' }}>{sineklikSonucu.tepeSayisi ?? 0}</strong> adet
-                  </div>
-                  <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '2px' }}>
-                    {sineklikSonucu.tepeSayisi ?? 0} tepe {spAcilimYonu === 'yatay' ? 'en' : 'boy'} {sineklikSonucu.tepeOlcusu ?? 0}mm üzerinden
-                  </div>
-                </div>
+                {patronMu && (
+                  <>
+                    <h3 style={{ margin: '0 0 8px 0', color: '#1E3A8A', fontSize: '14px', borderBottom: '1px solid #eee', paddingBottom: '6px' }}>Maliyet Hesabı</h3>
+                    <div style={{ marginBottom: '12px', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '12px', color: '#666' }}>Toplam Tutar ({spAdet} Adet):</div>
+                      <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#1E3A8A', marginTop: '2px' }}>
+                        {(sineklikSonucu.teklifDetay?.toplam ?? 0).toLocaleString('tr-TR')} ₺
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                        Kıvırım (tepe) sayısı: <strong style={{ color: '#1E3A8A' }}>{sineklikSonucu.tepeSayisi ?? 0}</strong> adet
+                      </div>
+                      <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '2px' }}>
+                        {sineklikSonucu.tepeSayisi ?? 0} tepe {spAcilimYonu === 'yatay' ? 'en' : 'boy'} {sineklikSonucu.tepeOlcusu ?? 0}mm üzerinden
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div style={{ marginBottom: '12px' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '12px' }}>Açıklama:</label>
@@ -1015,7 +1017,9 @@ export default function PvcCizimEkrani() {
                         <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Tip</th>
                         <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Ölçü</th>
                         <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Detay</th>
-                        <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>Tutar</th>
+                        {patronMu && (
+                          <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>Tutar</th>
+                        )}
                         <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'center' }}>İşlem</th>
                       </tr>
                     </thead>
@@ -1026,9 +1030,11 @@ export default function PvcCizimEkrani() {
                           <td style={{ padding: '8px', borderBottom: '1px solid #eee', textTransform: 'capitalize' }}>{kalem.urunTipi.replace('_', ' ')}</td>
                           <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{kalem.genislik}x{kalem.yukseklik} {kalem.adet > 1 && `(x${kalem.adet})`}</td>
                           <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{kalem.renkIsmi || kalem.renk}</td>
-                          <td style={{ padding: '8px', borderBottom: '1px solid #eee', textAlign: 'right', fontWeight: 'bold', color: '#1E3A8A' }}>
-                            {Math.ceil(Number(kalem.fiyat) || 0).toLocaleString('tr-TR')} ₺
-                          </td>
+                          {patronMu && (
+                            <td style={{ padding: '8px', borderBottom: '1px solid #eee', textAlign: 'right', fontWeight: 'bold', color: '#1E3A8A' }}>
+                              {Math.ceil(Number(kalem.fiyat) || 0).toLocaleString('tr-TR')} ₺
+                            </td>
+                          )}
                           <td style={{ padding: '8px', borderBottom: '1px solid #eee', textAlign: 'center' }}>
                             <button onClick={(e) => { e.stopPropagation(); setSepet(prev => prev.filter(k => k.id !== kalem.id)); }} style={{ padding: '4px 8px', backgroundColor: '#c62828', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '11px' }}>Sil</button>
                           </td>
@@ -1038,12 +1044,14 @@ export default function PvcCizimEkrani() {
                   </table>
                 </div>
 
-                <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '2px solid #cfd8dc', textAlign: 'right' }}>
-                  <span style={{ fontSize: '14px', color: '#546e7a', marginRight: '10px' }}>Proje Genel Toplamı:</span>
-                  <h2 style={{ margin: '0', color: '#1E3A8A', fontSize: '24px', display: 'inline-block' }}>
-                    {Math.ceil(sepetGenelToplam).toLocaleString('tr-TR')} ₺
-                  </h2>
-                </div>
+                {patronMu && (
+                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '2px solid #cfd8dc', textAlign: 'right' }}>
+                    <span style={{ fontSize: '14px', color: '#546e7a', marginRight: '10px' }}>Proje Genel Toplamı:</span>
+                    <h2 style={{ margin: '0', color: '#1E3A8A', fontSize: '24px', display: 'inline-block' }}>
+                      {Math.ceil(sepetGenelToplam).toLocaleString('tr-TR')} ₺
+                    </h2>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1110,7 +1118,7 @@ export default function PvcCizimEkrani() {
         )}
 
         {/* 5. SEKME: FİYAT VE PROFİL AYARLARI */}
-        {aktifSekme === 'fiyatlar' && (
+        {aktifSekme === 'fiyatlar' && patronMu && (
           <div style={{ padding: '14px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', width: '100%', boxSizing: 'border-box' }}>
             
             <div className="mobil-sutun" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '12px' }}>
@@ -1259,7 +1267,7 @@ export default function PvcCizimEkrani() {
         )}
 
         {/* 6. SEKME: PATRON EKRANI */}
-        {aktifSekme === 'patron' && (
+        {aktifSekme === 'patron' && patronMu && (
           <div style={{ padding: '14px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', minHeight: '380px', width: '100%', boxSizing: 'border-box' }}>
             <div className="mobil-sutun" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #1E3A8A', paddingBottom: '12px', marginBottom: '16px' }}>
               <div>
