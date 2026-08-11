@@ -4,7 +4,8 @@ import API, { getAbonelikDurumu, abonelikBaslat } from './services/api';
 import ProfilePage from './pages/ProfilePage';
 import { useAuth } from './context/AuthContext.jsx';
 import { hesapla, hesaplaSineklik } from './utils/fiyatHesapla.js';
-import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI, sineklikRenkVarMi } from './utils/fiyatTablosu.js';
+import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI, sineklikRenkVarMi, CAM_TIPLERI } from './utils/fiyatTablosu.js';
+import { patronOzetiHesapla, ARALIK_ADLARI, URUN_ADLARI, DURUM_ADLARI } from './utils/patronOzeti.js';
 import DogramaCizim from './components/DogramaCizim.jsx';
 import TeklifYazdir from './components/TeklifYazdir.jsx';
 
@@ -226,8 +227,7 @@ export default function PvcCizimEkrani() {
   const [fiyatTablo, setFiyatTablo] = useState(VARSAYILAN_FIYATLAR);
   const [fiyatYukleniyor, setFiyatYukleniyor] = useState(true);
 
-  const [raporBaslangic, setRaporBaslangic] = useState('');
-  const [raporBitis, setRaporBitis] = useState('');
+  const [raporAralik, setRaporAralik] = useState('ay');
 
   useEffect(() => {
     const fiyatlariBuluttanGetir = async () => {
@@ -596,57 +596,11 @@ export default function PvcCizimEkrani() {
   const bolmeler = Array.from({ length: bolmeSayisi }, (_, index) => index);
   const sablonBtnStyle = { padding: '5px 10px', backgroundColor: '#f1f5f9', color: '#1E3A8A', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', flexShrink: 0, whiteSpace: 'nowrap' };
 
-  const parseTarihTR = (tarihStr) => {
-    if (!tarihStr) return new Date(0);
-    const parcalar = tarihStr.split(/[./-]/);
-    if (parcalar.length === 3) {
-      if (parcalar[2].length === 4) return new Date(parcalar[2], parcalar[1] - 1, parcalar[0]); 
-      else return new Date(parcalar[0], parcalar[1] - 1, parcalar[2]); 
-    }
-    return new Date();
-  };
-
-  let filtreliArsiv = musteriArsivi;
-  if (raporBaslangic || raporBitis) {
-    const bas = raporBaslangic ? new Date(raporBaslangic) : new Date(0);
-    const bit = raporBitis ? new Date(raporBitis) : new Date();
-    bit.setHours(23, 59, 59, 999);
-    filtreliArsiv = musteriArsivi.filter(arsiv => {
-      const pTarih = parseTarihTR(arsiv.teklifTarihi);
-      return pTarih >= bas && pTarih <= bit;
-    });
-  }
-
-  let raporCiro = 0; let raporCamM2 = 0; let raporSineklikM2 = 0;
-  let profilTuketim = { upvc: { beyaz: 0, antrasit: 0, altin_mese: 0 }, aluminyum: { beyaz: 0, antrasit: 0, altin_mese: 0 } };
-
-  filtreliArsiv.forEach(arsiv => {
-    raporCiro += Number(arsiv.toplamFiyat) || 0;
-    if (arsiv.sepet && Array.isArray(arsiv.sepet)) {
-      arsiv.sepet.forEach(item => {
-        let adet = Number(item.adet) || 1;
-        if (SP_URUN_TIPLERI_TUMU.includes(item.urunTipi)) {
-          raporSineklikM2 += ((Number(item.genislik) * Number(item.yukseklik)) / 1000000) * adet;
-        } else {
-          let pVal = Number(item.profilSerisi) || 70;
-          let w = Number(item.genislik) || 0; let h = Number(item.yukseklik) || 0; let bolme = Number(item.bolmeSayisi) || 1;
-          let kasaM = (w + h) * 2 / 1000;
-          let dikmeM = bolme > 1 ? (bolme - 1) * (h - 2*pVal) / 1000 : 0;
-          let kanatM = 0;
-          if (item.kanatlar && Array.isArray(item.kanatlar)) {
-            item.kanatlar.forEach(k => { if (k !== 'sabit') kanatM += ((w/bolme) + (h - 2*pVal)) * 2 / 1000; });
-          }
-          let yatayM = item.enineBolmeVar ? (w - 2*pVal)/1000 : 0;
-          let totalProfil = (kasaM + Math.max(0, dikmeM) + kanatM + yatayM) * adet;
-          let malzemeTipi = item.malzeme || 'upvc'; let renkTipi = item.renk || 'beyaz';
-          if (profilTuketim[malzemeTipi] && profilTuketim[malzemeTipi][renkTipi] !== undefined) {
-            profilTuketim[malzemeTipi][renkTipi] += totalProfil;
-          }
-          raporCamM2 += ((w * h) / 1000000) * adet; 
-        }
-      });
-    }
-  });
+  const patronOzeti = useMemo(
+    () => patronOzetiHesapla(musteriArsivi, fiyatTablo, { aralik: raporAralik }),
+    [musteriArsivi, fiyatTablo, raporAralik]
+  );
+  const monoStil = { fontFamily: "'JetBrains Mono', monospace", fontVariantNumeric: 'tabular-nums' };
 
   return (
     <div className="ana-konteyner" style={{ position: 'relative', minHeight: '100vh', fontFamily: 'sans-serif', color: '#1E3A8A', backgroundColor: '#f8fafc', width: '100%', overflowX: 'hidden' }}>
@@ -1310,81 +1264,190 @@ export default function PvcCizimEkrani() {
             <div className="mobil-sutun" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #1E3A8A', paddingBottom: '12px', marginBottom: '16px' }}>
               <div>
                 <h3 style={{ margin: '0 0 4px 0', color: '#1E3A8A', fontSize: '20px' }}>📊 Patron & Fabrika Analiz Özeti</h3>
-                <p style={{ margin: 0, color: '#555', fontSize: '12px' }}>Seçtiğiniz tarihler arasındaki ciroyu ve malzeme tüketimini takip edin.</p>
+                <p style={{ margin: 0, color: '#555', fontSize: '12px' }}>Seçtiğiniz döneme göre ciro, tüketim ve satış kırılımını görün.</p>
               </div>
-              <div className="mobil-tam-genislik" style={{ display: 'flex', gap: '8px', alignItems: 'center', backgroundColor: '#fff', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', flexWrap: 'wrap' }}>
-                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#1E3A8A' }}>Başlangıç: <input type="date" value={raporBaslangic} onChange={e => setRaporBaslangic(e.target.value)} style={{ padding: '4px', border: '1px solid #ccc', borderRadius: '3px' }}/></label>
-                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#1E3A8A' }}>Bitiş: <input type="date" value={raporBitis} onChange={e => setRaporBitis(e.target.value)} style={{ padding: '4px', border: '1px solid #ccc', borderRadius: '3px' }}/></label>
-                <button onClick={() => {setRaporBaslangic(''); setRaporBitis('');}} style={{ padding: '4px 8px', backgroundColor: '#1E3A8A', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Sıfırla</button>
+              <div className="mobil-tam-genislik" style={{ display: 'flex', gap: '6px' }}>
+                {Object.entries(ARALIK_ADLARI).map(([id, ad]) => (
+                  <button key={id} onClick={() => setRaporAralik(id)} style={{ flex: 1, padding: '8px 14px', backgroundColor: raporAralik === id ? '#1E3A8A' : '#f1f5f9', color: raporAralik === id ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                    {ad}
+                  </button>
+                ))}
               </div>
             </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+
+            {/* 4 ÖZET KART */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
               <div style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', textAlign: 'center' }}>
                 <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>💰</span>
-                <strong style={{ color: '#757575', fontSize: '12px', display: 'block', textTransform: 'uppercase' }}>Filtrelenen Toplam Ciro</strong>
-                <span style={{ color: '#1E3A8A', fontSize: '24px', fontWeight: '900', display: 'block', marginTop: '6px' }}>
-                  {Math.ceil(raporCiro).toLocaleString('tr-TR')} ₺
-                </span>
-              </div>
-
-              <div onClick={() => handleSekmeDegistir('arsiv')} style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', textAlign: 'center', cursor: 'pointer' }}>
-                <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>📁</span>
-                <strong style={{ color: '#757575', fontSize: '12px', display: 'block', textTransform: 'uppercase' }}>Üretilen Proje</strong>
-                <span style={{ color: '#1E3A8A', fontSize: '24px', fontWeight: '900', display: 'block', marginTop: '6px' }}>
-                  {filtreliArsiv.length} Adet
+                <strong style={{ color: '#757575', fontSize: '12px', display: 'block', textTransform: 'uppercase' }}>Ciro</strong>
+                <span style={{ ...monoStil, color: '#1E3A8A', fontSize: '22px', fontWeight: '900', display: 'block', marginTop: '6px' }}>
+                  {patronOzeti.ciro.toLocaleString('tr-TR')} ₺
                 </span>
               </div>
 
               <div style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', textAlign: 'center' }}>
-                <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>📐</span>
-                <strong style={{ color: '#757575', fontSize: '12px', display: 'block', textTransform: 'uppercase' }}>Harcanan Profil</strong>
-                <span style={{ color: '#1E3A8A', fontSize: '24px', fontWeight: '900', display: 'block', marginTop: '6px' }}>
-                  {Math.round(
-                    profilTuketim.upvc.beyaz + profilTuketim.upvc.antrasit + profilTuketim.upvc.altin_mese +
-                    profilTuketim.aluminyum.beyaz + profilTuketim.aluminyum.antrasit + profilTuketim.aluminyum.altin_mese
-                  ).toLocaleString('tr-TR')} Metre
+                <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>📁</span>
+                <strong style={{ color: '#757575', fontSize: '12px', display: 'block', textTransform: 'uppercase' }}>Proje Sayısı</strong>
+                <span style={{ ...monoStil, color: '#1E3A8A', fontSize: '22px', fontWeight: '900', display: 'block', marginTop: '6px' }}>
+                  {patronOzeti.projeSayisi}
+                </span>
+              </div>
+
+              <div style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', textAlign: 'center' }}>
+                <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>📦</span>
+                <strong style={{ color: '#757575', fontSize: '12px', display: 'block', textTransform: 'uppercase' }}>Kalem Sayısı</strong>
+                <span style={{ ...monoStil, color: '#1E3A8A', fontSize: '22px', fontWeight: '900', display: 'block', marginTop: '6px' }}>
+                  {patronOzeti.kalemSayisi}
+                </span>
+              </div>
+
+              <div style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', textAlign: 'center' }}>
+                <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>🔢</span>
+                <strong style={{ color: '#757575', fontSize: '12px', display: 'block', textTransform: 'uppercase' }}>Toplam Adet</strong>
+                <span style={{ ...monoStil, color: '#1E3A8A', fontSize: '22px', fontWeight: '900', display: 'block', marginTop: '6px' }}>
+                  {patronOzeti.toplamAdet}
                 </span>
               </div>
             </div>
 
-            <h4 style={{ color: '#1E3A8A', borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '12px', fontSize: '14px' }}>Maliyet & Tüketim Raporu (Bill of Materials)</h4>
-            <div className="tablo-kapsayici">
-              <table style={{ width: '100%', backgroundColor: 'white', border: '1px solid #e2e8f0', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '500px' }}>
+            {/* PROFİL TÜKETİMİ */}
+            <h4 style={{ color: '#1E3A8A', borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '12px', fontSize: '14px' }}>Profil Tüketimi</h4>
+            <div className="tablo-kapsayici" style={{ marginBottom: '24px' }}>
+              <table style={{ width: '100%', backgroundColor: 'white', border: '1px solid #e2e8f0', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '320px' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A' }}>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Malzeme Tipi</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Beyaz</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Antrasit</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Altın Meşe</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#dbeafe' }}>Toplam Tüketim</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Seri</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Metre</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>UPVC Plastik Profil</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{Math.round(profilTuketim.upvc.beyaz)} m</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{Math.round(profilTuketim.upvc.antrasit)} m</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{Math.round(profilTuketim.upvc.altin_mese)} m</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>{Math.round(profilTuketim.upvc.beyaz + profilTuketim.upvc.antrasit + profilTuketim.upvc.altin_mese)} m</td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>Beyaz Seri</td>
+                    <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{patronOzeti.profil.beyaz.metre.toLocaleString('tr-TR')} m</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>Alüminyum Profil</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{Math.round(profilTuketim.aluminyum.beyaz)} m</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{Math.round(profilTuketim.aluminyum.antrasit)} m</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{Math.round(profilTuketim.aluminyum.altin_mese)} m</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>{Math.round(profilTuketim.aluminyum.beyaz + profilTuketim.aluminyum.antrasit + profilTuketim.aluminyum.altin_mese)} m</td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>Renkli Seri</td>
+                    <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{patronOzeti.profil.renkli.metre.toLocaleString('tr-TR')} m</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>Isıcam & Panel</td>
-                    <td colSpan="3" style={{ padding: '8px', borderBottom: '1px solid #eee', fontStyle: 'italic', color: '#777' }}>Projedeki toplam cam alanı.</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>{raporCamM2.toFixed(2)} m²</td>
+                    <td style={{ padding: '8px', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>Toplam</td>
+                    <td style={{ ...monoStil, padding: '8px', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>{patronOzeti.profil.toplamMetre.toLocaleString('tr-TR')} m</td>
                   </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* CAM TÜKETİMİ */}
+            <h4 style={{ color: '#1E3A8A', borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '12px', fontSize: '14px' }}>Cam Tüketimi</h4>
+            <div className="tablo-kapsayici" style={{ marginBottom: '24px' }}>
+              <table style={{ width: '100%', backgroundColor: 'white', border: '1px solid #e2e8f0', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '320px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A' }}>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Cam Tipi</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>m²</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {CAM_TIPLERI.map(c => (
+                    <tr key={c.id}>
+                      <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>{c.ad}</td>
+                      <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{(patronOzeti.camlar[c.id]?.m2 ?? 0).toFixed(2)} m²</td>
+                    </tr>
+                  ))}
                   <tr>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>Sineklik & Perde Tülü</td>
-                    <td colSpan="3" style={{ padding: '8px', borderBottom: '1px solid #eee', fontStyle: 'italic', color: '#777' }}>Toplam sineklik/perde tül metrajı.</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>{raporSineklikM2.toFixed(2)} m²</td>
+                    <td style={{ padding: '8px', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>Toplam</td>
+                    <td style={{ ...monoStil, padding: '8px', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>{patronOzeti.camToplamM2.toFixed(2)} m²</td>
                   </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* SİNEKLİK VE PERDE TÜKETİMİ */}
+            <h4 style={{ color: '#1E3A8A', borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '12px', fontSize: '14px' }}>Sineklik ve Perde Tüketimi</h4>
+            <div className="tablo-kapsayici" style={{ marginBottom: '24px' }}>
+              <table style={{ width: '100%', backgroundColor: 'white', border: '1px solid #e2e8f0', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '560px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A' }}>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Tip</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Adet</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Çerçeve (m)</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Kumaş/Tel (m²)</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Tepe Sayısı</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#dbeafe' }}>Ciro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {SINEKLIK_TIPLERI.map(sp => {
+                    const s = patronOzeti.sineklikler[sp.id] || { adet: 0, cerceveM: 0, kumasM2: 0, tepeSayisi: 0, ciro: 0 };
+                    return (
+                      <tr key={sp.id}>
+                        <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>{sp.ad}</td>
+                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{s.adet}</td>
+                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{s.cerceveM.toLocaleString('tr-TR')} m</td>
+                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{s.kumasM2.toFixed(2)} m²</td>
+                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{s.tepeSayisi}</td>
+                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>{s.ciro.toLocaleString('tr-TR')} ₺</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ÜRÜN BAZLI SATIŞ */}
+            <h4 style={{ color: '#1E3A8A', borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '12px', fontSize: '14px' }}>Ürün Bazlı Satış</h4>
+            <div className="tablo-kapsayici" style={{ marginBottom: '24px' }}>
+              <table style={{ width: '100%', backgroundColor: 'white', border: '1px solid #e2e8f0', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '320px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A' }}>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Ürün</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Adet</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Ciro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(patronOzeti.urunTipleri).length === 0 ? (
+                    <tr>
+                      <td colSpan="3" style={{ padding: '12px', textAlign: 'center', color: '#777' }}>Bu dönemde satış yok.</td>
+                    </tr>
+                  ) : (
+                    Object.entries(patronOzeti.urunTipleri)
+                      .sort((a, b) => b[1].ciro - a[1].ciro)
+                      .map(([tip, v]) => (
+                        <tr key={tip}>
+                          <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>{URUN_ADLARI[tip] || tip}</td>
+                          <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{v.adet}</td>
+                          <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{v.ciro.toLocaleString('tr-TR')} ₺</td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* DURUM DAĞILIMI */}
+            <h4 style={{ color: '#1E3A8A', borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '12px', fontSize: '14px' }}>Durum Dağılımı</h4>
+            <div className="tablo-kapsayici">
+              <table style={{ width: '100%', backgroundColor: 'white', border: '1px solid #e2e8f0', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '320px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A' }}>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Durum</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Proje Sayısı</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(patronOzeti.durumlar).length === 0 ? (
+                    <tr>
+                      <td colSpan="2" style={{ padding: '12px', textAlign: 'center', color: '#777' }}>Bu dönemde proje yok.</td>
+                    </tr>
+                  ) : (
+                    Object.entries(patronOzeti.durumlar).map(([durum, sayi]) => (
+                      <tr key={durum}>
+                        <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>{DURUM_ADLARI[durum] || durum}</td>
+                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{sayi}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
