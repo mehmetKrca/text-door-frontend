@@ -39,10 +39,14 @@ export const CAM_TIPLERI = [
    SİNEKLİK / PERDE ÜRÜN TİPLERİ
    ============================================================ */
 export const SINEKLIK_TIPLERI = [
-  { id: 'menteseliSineklik', ad: 'Menteşeli Sineklik', kisa: 'Menteşeli' },
-  { id: 'surguluSineklik', ad: 'Sürgülü Sineklik', kisa: 'Sürgülü' },
-  { id: 'plisePerde', ad: 'Plise Perde', kisa: 'Plise' },
+  { id: 'menteseliSineklik', ad: 'Menteşeli Sineklik', kisa: 'Menteşeli', renkVar: true },
+  { id: 'surguluSineklik', ad: 'Sürgülü Sineklik', kisa: 'Sürgülü', renkVar: true },
+  { id: 'plisePerde', ad: 'Plise Perde', kisa: 'Plise', renkVar: false },
 ];
+
+/* bu tipte beyaz / renkli kademe seçilebilir mi? */
+export const sineklikRenkVarMi = (tip) =>
+  !!SINEKLIK_TIPLERI.find((s) => s.id === tip)?.renkVar;
 
 /* ============================================================
    VARSAYILAN FİYATLAR
@@ -99,14 +103,16 @@ export const VARSAYILAN_FIYATLAR = {
 
   menteseliSineklik: {
     ad: 'Menteşeli Sineklik',
-    cerceveM: 140,
+    cerceveM: 140,          // beyaz seri
+    cerceveMRenkli: 185,    // renkli seri
     kumasM2: 280,
     tepeBasiBirim: 8,
     iscilik: 180,
   },
   surguluSineklik: {
     ad: 'Sürgülü Sineklik',
-    cerceveM: 190,
+    cerceveM: 190,          // beyaz seri
+    cerceveMRenkli: 245,    // renkli seri
     kumasM2: 300,
     tepeBasiBirim: 10,
     iscilik: 250,

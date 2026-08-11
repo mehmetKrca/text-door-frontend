@@ -14,6 +14,7 @@ import {
   VARSAYILAN_FIYATLAR,
   fiyatTablosunuDonustur,
   fiyatTablosuUyarilari,
+  sineklikRenkVarMi,
 } from './fiyatTablosu.js';
 
 let gecen = 0;
@@ -483,6 +484,56 @@ console.log('\nTEST 18 — üç tipte de yön çalışıyor');
     esit(`${tip} yatay 35 tepe`, y.tepeSayisi, 35);
     dogru(`${tip} yatayda daha ucuz`, y.maliyet.birimHam < d.maliyet.birimHam);
   });
+}
+
+
+/* ============================================================
+   TEST 19 — SİNEKLİKTE BEYAZ / RENKLİ KADEME
+   ============================================================
+   Menteşeli sineklik 700 × 2000, dikey
+     beyaz  çerçeve 5,4 m × 140 = 756
+     renkli çerçeve 5,4 m × 185 = 999
+   Fark yalnızca çerçevede olmalı; kumaş, tepe ve işçilik aynı.
+*/
+console.log('\nTEST 19 — sineklikte renk kademesi');
+{
+  const ortak = { genislik: 700, yukseklik: 2000, adet: 1, acilimYonu: 'dikey' };
+
+  const mBeyaz = hesaplaSineklik({ ...ortak, tip: 'menteseliSineklik', renkKademesi: 'beyaz' }, T);
+  const mRenkli = hesaplaSineklik({ ...ortak, tip: 'menteseliSineklik', renkKademesi: 'renkli' }, T);
+
+  esit('menteşeli renk seçilebilir', mBeyaz.renkVar ? 1 : 0, 1);
+  esit('beyaz kademe', mBeyaz.kademe === 'beyaz' ? 1 : 0, 1);
+  esit('renkli kademe', mRenkli.kademe === 'renkli' ? 1 : 0, 1);
+  esit('beyaz çerçeve 756 ₺', mBeyaz.maliyet.cerceve, 756, 2);
+  esit('renkli çerçeve 999 ₺', mRenkli.maliyet.cerceve, 999, 2);
+  esit('kumaş aynı', mRenkli.maliyet.kumas, mBeyaz.maliyet.kumas);
+  esit('tepe aynı', mRenkli.maliyet.tepe, mBeyaz.maliyet.tepe);
+  esit('işçilik aynı', mRenkli.maliyet.iscilik, mBeyaz.maliyet.iscilik);
+  dogru('renkli daha pahalı', mRenkli.maliyet.birimHam > mBeyaz.maliyet.birimHam);
+
+  const sBeyaz = hesaplaSineklik({ ...ortak, tip: 'surguluSineklik', renkKademesi: 'beyaz' }, T);
+  const sRenkli = hesaplaSineklik({ ...ortak, tip: 'surguluSineklik', renkKademesi: 'renkli' }, T);
+  dogru('sürgülüde de renkli pahalı', sRenkli.maliyet.birimHam > sBeyaz.maliyet.birimHam);
+
+  // plise perdede renk fiyatı etkilememeli
+  const pBeyaz = hesaplaSineklik({ ...ortak, tip: 'plisePerde', renkKademesi: 'beyaz' }, T);
+  const pRenkli = hesaplaSineklik({ ...ortak, tip: 'plisePerde', renkKademesi: 'renkli' }, T);
+  esit('plisede renk seçilemez', pBeyaz.renkVar ? 1 : 0, 0);
+  esit('plisede renk fiyatı değiştirmiyor', pRenkli.maliyet.birimHam, pBeyaz.maliyet.birimHam);
+  esit('plise her zaman beyaz kademe', pRenkli.kademe === 'beyaz' ? 1 : 0, 1);
+
+  // yardımcı fonksiyon
+  dogru('sineklikRenkVarMi menteşeli true', sineklikRenkVarMi('menteseliSineklik') === true);
+  dogru('sineklikRenkVarMi sürgülü true', sineklikRenkVarMi('surguluSineklik') === true);
+  dogru('sineklikRenkVarMi plise false', sineklikRenkVarMi('plisePerde') === false);
+
+  // renkli fiyat girilmemişse beyaz fiyatına düşmeli, sıfırlanmamalı
+  const eksik = JSON.parse(JSON.stringify(T));
+  eksik.menteseliSineklik.cerceveMRenkli = 0;
+  const yedekli = hesaplaSineklik({ ...ortak, tip: 'menteseliSineklik', renkKademesi: 'renkli' }, eksik);
+  esit('renkli fiyat yoksa beyaza düşer', yedekli.maliyet.cerceve, 756, 2);
+  dogru('sessizce sıfırlanmadı', yedekli.maliyet.cerceve > 0);
 }
 
 /* ============================================================

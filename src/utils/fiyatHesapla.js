@@ -16,7 +16,7 @@
  *  5. Fiyat tablosunda eksik alan sessizce 0 oluyordu → artık uyarı üretilir.
  */
 
-import { renkKademesi } from './fiyatTablosu.js';
+import { renkKademesi, sineklikRenkVarMi } from './fiyatTablosu.js';
 
 /* köşe kesiminde oluşan fire (gönye kesim kaybı) */
 export const FIRE_KATSAYISI = 1.12;
@@ -415,7 +415,15 @@ export function hesaplaSineklik(g, t) {
     return n;
   };
 
-  const fCerceve = bf(u.cerceveM, 'Çerçeve profili');
+  /* Menteşeli ve sürgülü sineklikte profil rengi fiyatı etkiler.
+     Plise perdede kasa rengi fiyata girmez.                        */
+  const renkVar = sineklikRenkVarMi(tip);
+  const kademe = renkVar && g.renkKademesi === 'renkli' ? 'renkli' : 'beyaz';
+  const fCerceve = kademe === 'renkli'
+    ? (Number(u.cerceveMRenkli) > 0
+        ? bf(u.cerceveMRenkli, 'Renkli çerçeve profili')
+        : bf(u.cerceveM, 'Çerçeve profili'))
+    : bf(u.cerceveM, 'Çerçeve profili');
   const fKumas = bf(u.kumasM2, 'Kumaş / tel');
   const fTepe = bf(u.tepeBasiBirim, 'Tepe başı');
   const fIscilik = bf(u.iscilik, 'İşçilik');
@@ -442,6 +450,8 @@ export function hesaplaSineklik(g, t) {
     uyarilar,
     tip,
     tipAdi: u.ad || tip,
+    renkVar,
+    kademe,
 
     olculer: { genislik: en, yukseklik: boy, adet },
 

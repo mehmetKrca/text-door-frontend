@@ -4,7 +4,7 @@ import API, { getAbonelikDurumu, abonelikBaslat } from './services/api';
 import ProfilePage from './pages/ProfilePage';
 import { useAuth } from './context/AuthContext.jsx';
 import { hesapla, hesaplaSineklik } from './utils/fiyatHesapla.js';
-import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI } from './utils/fiyatTablosu.js';
+import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI, sineklikRenkVarMi } from './utils/fiyatTablosu.js';
 import DogramaCizim from './components/DogramaCizim.jsx';
 
 // 🎯 TOKEN ALMA YARDIMCI FONKSİYONU
@@ -218,6 +218,7 @@ export default function PvcCizimEkrani() {
   const [spYukseklik, setSpYukseklik] = useState(2000);
   const [spAdet, setSpAdet] = useState(1);
   const [spAcilimYonu, setSpAcilimYonu] = useState('dikey');
+  const [spRenkKademesi, setSpRenkKademesi] = useState('beyaz');
 
   const [aktifRenkSekmesi, setAktifRenkSekmesi] = useState('beyaz');
   
@@ -379,9 +380,10 @@ export default function PvcCizimEkrani() {
       adet: spAdet,
       tip: spTipi,
       acilimYonu: spAcilimYonu,
+      renkKademesi: spRenkKademesi,
     };
     return hesaplaSineklik(girdi, fiyatTablo);
-  }, [spGenislik, spYukseklik, spAdet, spTipi, spAcilimYonu, fiyatTablo]);
+  }, [spGenislik, spYukseklik, spAdet, spTipi, spAcilimYonu, spRenkKademesi, fiyatTablo]);
 
   const sepetGenelToplam = useMemo(() => sepet.reduce((acc, kalem) => acc + (Number(kalem.fiyat) || 0), 0), [sepet]);
   const sepetToplamAdet = useMemo(() => sepet.reduce((acc, kalem) => acc + (Number(kalem.adet) || 1), 0), [sepet]);
@@ -435,8 +437,9 @@ export default function PvcCizimEkrani() {
       genislik: Number(spGenislik),
       yukseklik: Number(spYukseklik),
       adet: Number(spAdet) || 1,
-      renk: 'Standart',
-      renkIsmi: 'Standart',
+      renk: sineklikRenkVarMi(spTipi) ? spRenkKademesi : 'Standart',
+      renkIsmi: sineklikRenkVarMi(spTipi) ? (spRenkKademesi === 'renkli' ? 'Renkli Seri' : 'Beyaz Seri') : 'Standart',
+      renkKademesi: sineklikRenkVarMi(spTipi) ? spRenkKademesi : 'beyaz',
       acilimYonu: spAcilimYonu,
       tepeSayisi: sineklikSonucu.tepeSayisi,
       fiyat: Math.ceil(anlikTutar)
@@ -581,7 +584,7 @@ export default function PvcCizimEkrani() {
   const handleKalemiDuzenle = (kalem) => {
     setDuzenlenenKalemId(kalem.id); setKalemAdi(kalem.isim);
     if (SP_URUN_TIPLERI_TUMU.includes(kalem.urunTipi)) {
-      setSpTipi(spTipiDonustur(kalem.urunTipi)); setSpGenislik(kalem.genislik || 800); setSpYukseklik(kalem.yukseklik || 2000); setSpAdet(kalem.adet || 1); setSpAcilimYonu(kalem.acilimYonu === 'yatay' ? 'yatay' : 'dikey'); handleSekmeDegistir('sineklik');
+      setSpTipi(spTipiDonustur(kalem.urunTipi)); setSpGenislik(kalem.genislik || 800); setSpYukseklik(kalem.yukseklik || 2000); setSpAdet(kalem.adet || 1); setSpAcilimYonu(kalem.acilimYonu === 'yatay' ? 'yatay' : 'dikey'); setSpRenkKademesi(kalem.renkKademesi === 'renkli' ? 'renkli' : 'beyaz'); handleSekmeDegistir('sineklik');
     } else {
       setUrunTipi(kalem.urunTipi); setGenislik(kalem.genislik); setYukseklik(kalem.yukseklik); setSagYukseklik(kalem.sagYukseklik || 1600); setBolmeSayisi(kalem.bolmeSayisi); setKanatlar(kalem.kanatlar); setBolmeOlculeri(kalem.bolmeOlculeri || Array(kalem.bolmeSayisi).fill(0)); setRenk(kalem.renk); setCamTipi(camTipiDonustur(kalem.camTipi)); setAltPanelLambiri(kalem.altPanelLambiri !== undefined ? kalem.altPanelLambiri : true); setEnineBolmeVar(kalem.enineBolmeVar || false); setEnineBolmeYerdenYukseklik(kalem.enineBolmeYerdenYukseklik || 800); setLambiriBoyu(kalem.lambiriBoyu || 800); setProfilSerisi(kalem.profilSerisi || 70); setAciModu(kalem.aciModu || 'aci_bul'); setManuelAci(kalem.manuelAci || 20); setEgimYonu(kalem.egimYonu || 'saga_yukselir'); handleSekmeDegistir('cizim');
     }
@@ -1059,9 +1062,19 @@ export default function PvcCizimEkrani() {
                   <button type="button" onClick={() => setSpAcilimYonu('yatay')} style={{ flex: 1, padding: '8px', backgroundColor: spAcilimYonu === 'yatay' ? '#1E3A8A' : '#f1f5f9', color: spAcilimYonu === 'yatay' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Yatay Açılım</button>
                 </div>
 
-                <div style={{ padding: '8px', backgroundColor: '#eff6ff', color: '#1E3A8A', borderRadius: '4px', fontSize: '11px', borderLeft: '3px solid #1E3A8A' }}>
-                  Not: Bu ürünlerde profil rengi fiyatı etkilemez.
-                </div>
+                {sineklikRenkVarMi(spTipi) ? (
+                  <>
+                    <h4 style={{ margin: '0 0 6px 0', color: '#1E3A8A', fontSize: '13px' }}>3. Profil Rengi</h4>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setSpRenkKademesi('beyaz')} style={{ flex: 1, padding: '8px', backgroundColor: spRenkKademesi === 'beyaz' ? '#1E3A8A' : '#f1f5f9', color: spRenkKademesi === 'beyaz' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Beyaz Seri</button>
+                      <button type="button" onClick={() => setSpRenkKademesi('renkli')} style={{ flex: 1, padding: '8px', backgroundColor: spRenkKademesi === 'renkli' ? '#1E3A8A' : '#f1f5f9', color: spRenkKademesi === 'renkli' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Renkli Seri</button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ padding: '8px', backgroundColor: '#eff6ff', color: '#1E3A8A', borderRadius: '4px', fontSize: '11px', borderLeft: '3px solid #1E3A8A' }}>
+                    Not: Plise perdede profil rengi fiyatı etkilemez.
+                  </div>
+                )}
               </div>
 
               <div className="mobil-tam-genislik" style={{ padding: '14px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', flex: '1', minWidth: '240px' }}>
@@ -1361,6 +1374,7 @@ export default function PvcCizimEkrani() {
                       <h5 style={{ margin: '0 0 8px 0', color: '#1E3A8A', fontSize: '12px' }}>{sp.ad}</h5>
                       {[
                         { key: 'cerceveM', label: 'Çerçeve (₺/m)' },
+                        ...(sp.renkVar ? [{ key: 'cerceveMRenkli', label: 'Renkli Çerçeve' }] : []),
                         { key: 'kumasM2', label: 'Kumaş/Tel (₺/m²)' },
                         { key: 'tepeBasiBirim', label: 'Tepe Başı (₺/adet)' },
                         { key: 'iscilik', label: 'İşçilik (₺)' }
