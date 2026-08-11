@@ -3,12 +3,20 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import API, { getAbonelikDurumu, abonelikBaslat } from './services/api';
 import ProfilePage from './pages/ProfilePage';
 import { useAuth } from './context/AuthContext.jsx';
+import { hesapla } from './utils/fiyatHesapla.js';
+import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur } from './utils/fiyatTablosu.js';
 
 // 🎯 TOKEN ALMA YARDIMCI FONKSİYONU
 const getAuthToken = () => {
   const token = localStorage.getItem('access') || localStorage.getItem('access_token');
   if (token && token !== 'null' && token !== 'undefined') return token;
   return null;
+};
+
+// 🎯 ESKİ CAM TİPİ DEĞERLERİNİ (standart/sinerji) YENİ ŞEMAYA TAŞIR
+const camTipiDonustur = (deger) => {
+  if (deger === 'standart' || deger === 'sinerji') return 'klasik';
+  return deger || 'klasik';
 };
 
 export default function PvcCizimEkrani() {
@@ -178,11 +186,10 @@ export default function PvcCizimEkrani() {
   const [enineBolmeYerdenYukseklik, setEnineBolmeYerdenYukseklik] = useState(800);
 
   const [lambiriBoyu, setLambiriBoyu] = useState(800);
-  const [aciModu, setAciModu] = useState('aci_bul'); 
+  const [aciModu, setAciModu] = useState('aci_bul');
   const [manuelAci, setManuelAci] = useState(20);
-  const [egimYonu, setEgimYonu] = useState('saga_yukselir'); 
-  
-  const [malzeme, setMalzeme] = useState('upvc'); 
+  const [egimYonu, setEgimYonu] = useState('saga_yukselir');
+
   const [renk, setRenk] = useState('beyaz');
   
   const [profilSerisi, setProfilSerisi] = useState(() => {
@@ -196,7 +203,7 @@ export default function PvcCizimEkrani() {
 
   const p = Number(profilSerisi) || 70;
   
-  const [camTipi, setCamTipi] = useState('standart');
+  const [camTipi, setCamTipi] = useState('klasik');
   const [sineklikIste, setSineklikIste] = useState(true);
   const [altPanelLambiri, setAltPanelLambiri] = useState(true);
 
@@ -208,28 +215,7 @@ export default function PvcCizimEkrani() {
 
   const [aktifRenkSekmesi, setAktifRenkSekmesi] = useState('beyaz');
   
-  const varsayilanFiyatlar = {
-    beyaz: { 
-      kasa: 200, ortakayit: 200, pencereKanadi: 200, kapiKanadi: 220, surmeKasa: 230, surmeKanadi: 230, 
-      aluKasa: 450, aluOrtakayit: 450, aluPencereKanadi: 450, aluKapiKanadi: 500, aluSurmeKasa: 500, aluSurmeKanadi: 500,
-      cam: 1100, camIci: 0, upvcLambiri: 380, aluLambiri: 550, tekAcilim: 400, ciftAcilim: 750, vasistas: 350, kapiAksesuar: 600, surmeAksesuar: 1000, sineklik: 450,
-      plisePerdeM2: 700, surguluSineklikM2: 850
-    },
-    antrasit: { 
-      kasa: 260, ortakayit: 260, pencereKanadi: 260, kapiKanadi: 280, surmeKasa: 290, surmeKanadi: 290, 
-      aluKasa: 550, aluOrtakayit: 550, aluPencereKanadi: 550, aluKapiKanadi: 600, aluSurmeKasa: 600, aluSurmeKanadi: 600,
-      cam: 1100, camIci: 0, upvcLambiri: 480, aluLambiri: 700, tekAcilim: 400, ciftAcilim: 750, vasistas: 350, kapiAksesuar: 600, surmeAksesuar: 1000, sineklik: 450,
-      plisePerdeM2: 700, surguluSineklikM2: 950
-    },
-    altin_mese: { 
-      kasa: 240, ortakayit: 240, pencereKanadi: 240, kapiKanadi: 260, surmeKasa: 270, surmeKanadi: 270, 
-      aluKasa: 500, aluOrtakayit: 500, aluPencereKanadi: 500, aluKapiKanadi: 550, aluSurmeKasa: 550, aluSurmeKanadi: 550,
-      cam: 1100, camIci: 0, upvcLambiri: 430, aluLambiri: 650, tekAcilim: 400, ciftAcilim: 750, vasistas: 350, kapiAksesuar: 600, surmeAksesuar: 1000, sineklik: 450,
-      plisePerdeM2: 700, surguluSineklikM2: 900
-    }
-  };
-
-  const [fiyatTablo, setFiyatTablo] = useState(varsayilanFiyatlar);
+  const [fiyatTablo, setFiyatTablo] = useState(VARSAYILAN_FIYATLAR);
   const [fiyatYukleniyor, setFiyatYukleniyor] = useState(true);
 
   const [raporBaslangic, setRaporBaslangic] = useState('');
@@ -241,17 +227,18 @@ export default function PvcCizimEkrani() {
         const response = await API.get('users/fiyat-tablosu/');
         const gelenVeri = response.data?.veri || (Object.keys(response.data || {}).length > 0 ? response.data : null);
 
-        if (gelenVeri && Object.keys(gelenVeri).length > 0 && gelenVeri.beyaz) {
-          setFiyatTablo(gelenVeri);
-          localStorage.setItem('ustaFiyatTablosu', JSON.stringify(gelenVeri));
+        if (gelenVeri && Object.keys(gelenVeri).length > 0 && (gelenVeri.beyaz || gelenVeri.seriler)) {
+          const donusturulmusTablo = fiyatTablosunuDonustur(gelenVeri);
+          setFiyatTablo(donusturulmusTablo);
+          localStorage.setItem('ustaFiyatTablosu', JSON.stringify(donusturulmusTablo));
         } else {
           const yerelFiyatlar = localStorage.getItem('ustaFiyatTablosu');
-          if (yerelFiyatlar) setFiyatTablo(JSON.parse(yerelFiyatlar));
+          if (yerelFiyatlar) setFiyatTablo(fiyatTablosunuDonustur(JSON.parse(yerelFiyatlar)));
         }
       } catch (error) {
         console.error("Fiyatlar buluttan çekilemedi:", error);
         const yerelFiyatlar = localStorage.getItem('ustaFiyatTablosu');
-        if (yerelFiyatlar) setFiyatTablo(JSON.parse(yerelFiyatlar));
+        if (yerelFiyatlar) setFiyatTablo(fiyatTablosunuDonustur(JSON.parse(yerelFiyatlar)));
       } finally {
         setFiyatYukleniyor(false);
       }
@@ -295,168 +282,86 @@ export default function PvcCizimEkrani() {
   // ⚡ DİNAMİK HESAPLAMA MOTORU (DIŞ ÖLÇÜ -> İÇ NET CAM)
   // =======================================================
   const hesaplananVeriler = useMemo(() => {
-    let gGen = Number(genislik) || 0;
-    let gYuk = Number(yukseklik) || 0;
-    let gSagYuk = Number(sagYukseklik) || 0;
-    let gAciVal = Number(manuelAci) || 0;
-    let gLambiri = Number(lambiriBoyu) || 800;
-    let gEnineYukseklik = Number(enineBolmeYerdenYukseklik) || 800;
+    // --- Açılı pencerede seçili açı moduna göre eksik ölçüyü türet ---
+    let turetilmisGenislik = genislik;
+    let turetilmisYukseklik = yukseklik;
+    let turetilmisSagYukseklik = sagYukseklik;
 
     if (urunTipi === 'acili') {
+      const gGenHam = Number(genislik) || 0;
+      let gYukHam = Number(yukseklik) || 0;
+      let gSagYukHam = Number(sagYukseklik) || 0;
+      const gAciVal = Number(manuelAci) || 0;
       const tanDegeri = Math.tan(gAciVal * Math.PI / 180);
+
       if (aciModu === 'sag_boy_bul') {
-        const fark = gGen * tanDegeri;
-        gSagYuk = egimYonu === 'saga_yukselir' ? gYuk + fark : Math.max(0, gYuk - fark);
+        const fark = gGenHam * tanDegeri;
+        gSagYukHam = egimYonu === 'saga_yukselir' ? gYukHam + fark : Math.max(0, gYukHam - fark);
+        turetilmisSagYukseklik = gSagYukHam;
       } else if (aciModu === 'sol_boy_bul') {
-        const fark = gGen * tanDegeri;
-        gYuk = egimYonu === 'saga_yukselir' ? Math.max(0, gSagYuk - fark) : gSagYuk + fark;
+        const fark = gGenHam * tanDegeri;
+        gYukHam = egimYonu === 'saga_yukselir' ? Math.max(0, gSagYukHam - fark) : gSagYukHam + fark;
+        turetilmisYukseklik = gYukHam;
       } else if (aciModu === 'en_bul') {
         if (tanDegeri > 0) {
-          const fark = Math.abs(gSagYuk - gYuk);
-          gGen = fark / tanDegeri;
+          const fark = Math.abs(gSagYukHam - gYukHam);
+          turetilmisGenislik = fark / tanDegeri;
         }
       }
     }
 
-    const dikmeSayi = bolmeSayisi - 1;
-    const isKapi = (urunTipi === 'wc_kapi' || urunTipi === 'balkonkapi' || urunTipi === 'kapi');
-    const isSurmeSistem = (urunTipi === 'surgulu');
-    
-    let hesaplananGenislikler = [];
-    const manuelTop = bolmeOlculeri.reduce((a, b) => a + (Number(b) || 0), 0);
-    const otoSay = bolmeOlculeri.filter(b => (Number(b) || 0) === 0).length || 1; 
-
-    if (manuelTop >= gGen && gGen > 0) {
-      const sifirSayisi = bolmeOlculeri.filter(b => (Number(b) || 0) === 0).length;
-      if (sifirSayisi === 0) {
-        const oran = gGen / manuelTop;
-        hesaplananGenislikler = bolmeOlculeri.map(b => (Number(b) || 0) * oran);
-      } else {
-        const oran = (gGen * 0.9) / manuelTop;
-        const bosluk = (gGen * 0.1) / sifirSayisi;
-        hesaplananGenislikler = bolmeOlculeri.map(b => (Number(b) || 0) > 0 ? (Number(b) || 0) * oran : bosluk);
-      }
-    } else {
-      const kalanNet = Math.max(0, gGen - manuelTop);
-      const otoGenislik = kalanNet / otoSay;
-      hesaplananGenislikler = bolmeOlculeri.map(b => (Number(b) || 0) > 0 ? (Number(b) || 0) : otoGenislik);
-    }
-
-    const koseKesimFireKatsayisi = 1.12; 
-    let kasaM = ((gGen + gYuk) * 2) / 1000;
-    if (urunTipi === 'acili') {
-      const fark = Math.abs(gSagYuk - gYuk);
-      const egimliKenar = Math.sqrt((gGen * gGen) + (fark * fark));
-      kasaM = (gGen + gYuk + gSagYuk + egimliKenar) / 1000;
-    }
-    const kasaMButun = kasaM * koseKesimFireKatsayisi;
-
-    const icYuk = Math.max(0, gYuk - (2 * p));
-    const dikmeM = ((dikmeSayi * icYuk) / 1000) * koseKesimFireKatsayisi; 
-    
-    let yatayKayitM = isKapi ? (gGen - (2*p)) / 1000 : 0;
-    if (enineBolmeVar) { yatayKayitM += (gGen - (2 * p)) / 1000; }
-    yatayKayitM = yatayKayitM * koseKesimFireKatsayisi;
-
-    const acilirKanatListesi = kanatlar.filter(tip => tip !== 'sabit');
-    const acilirAdet = acilirKanatListesi.length;
-    
-    let kanatM = 0;
-    let camM2 = 0;
-
-    hesaplananGenislikler.forEach((bg, index) => {
-      let netCamW = Math.max(0, bg - (2 * p));
-      let netCamH = Math.max(0, gYuk - (2 * p));
-      camM2 += (netCamW * netCamH) / 1000000;
-
-      if (kanatlar[index] !== 'sabit') {
-        let kBoy = netCamH + 40; 
-        let kEn = netCamW + 40;
-        if (enineBolmeVar) { kBoy = gYuk - gEnineYukseklik - p + 40; }
-        kanatM += (((kEn + kBoy) * 2) / 1000) * koseKesimFireKatsayisi;
-      }
-    });
-
-    const gercekLambiri = (urunTipi === 'wc_kapi') || (urunTipi === 'balkonkapi' && altPanelLambiri);
-    let lambiriMetrekare = 0;
-
-    if (isKapi && gercekLambiri) {
-      const lambiriY = Math.max(0, gLambiri - p); 
-      lambiriMetrekare = ((gGen - (2*p)) * lambiriY) / 1000000;
-      camM2 -= lambiriMetrekare; 
-    } else if (urunTipi === 'acili') {
-      camM2 = (gGen * ((gYuk + gSagYuk) / 2)) / 1000000;
-    }
-
-    const secilenTablo = fiyatTablo[renk] || fiyatTablo.beyaz;
-
-    const uKasa = malzeme === 'aluminyum' ? (Number(secilenTablo.aluKasa) || 0) : (Number(secilenTablo.kasa) || 0);
-    const uOrtakayit = malzeme === 'aluminyum' ? (Number(secilenTablo.aluOrtakayit) || 0) : (Number(secilenTablo.ortakayit) || 0);
-    const uPencereKanadi = malzeme === 'aluminyum' ? (Number(secilenTablo.aluPencereKanadi) || 0) : (Number(secilenTablo.pencereKanadi) || 0);
-    const uKapiKanadi = malzeme === 'aluminyum' ? (Number(secilenTablo.aluKapiKanadi) || 0) : (Number(secilenTablo.kapiKanadi) || 0);
-    const uSurmeKasa = malzeme === 'aluminyum' ? (Number(secilenTablo.aluSurmeKasa) || 0) : (Number(secilenTablo.surmeKasa) || 0);
-    const uSurmeKanadi = malzeme === 'aluminyum' ? (Number(secilenTablo.aluSurmeKanadi) || 0) : (Number(secilenTablo.surmeKanadi) || 0);
-    const uLambiri = malzeme === 'aluminyum' ? (Number(secilenTablo.aluLambiri) || 0) : (Number(secilenTablo.upvcLambiri) || 0);
-
-    const uSurmeAksesuar = Number(secilenTablo.surmeAksesuar) || 0;
-    const uKapiAksesuar = Number(secilenTablo.kapiAksesuar) || 0;
-    const uTekAcilim = Number(secilenTablo.tekAcilim) || 0;
-    const uCiftAcilim = Number(secilenTablo.ciftAcilim) || 0;
-    const uVasistas = Number(secilenTablo.vasistas) || 0;
-    const uSineklik = Number(secilenTablo.sineklik) || 0;
-    const uCamIci = Number(secilenTablo.camIci) || 0;
-
-    const camFiyatlar = {
-      standart: Number(secilenTablo.cam) || 0,
-      sinerji: (Number(secilenTablo.cam) || 0) + 400,
-      konfor: (Number(secilenTablo.cam) || 0) + 700
+    const girdi = {
+      genislik: turetilmisGenislik,
+      yukseklik: turetilmisYukseklik,
+      sagYukseklik: turetilmisSagYukseklik,
+      profilSerisi,
+      urunTipi,
+      bolmeSayisi,
+      bolmeOlculeri,
+      kanatlar,
+      renk,
+      camTipi,
+      sineklikIste,
+      enineBolmeVar,
+      enineBolmeYerdenYukseklik,
+      lambiriVar: altPanelLambiri,
+      lambiriBoyu,
+      karTL: ustaKarTL,
+      montajTL: montajPayiTL,
+      kdvEkle,
+      adet: 1,
     };
-    const seciliCamBirimFiyati = camFiyatlar[camTipi] || camFiyatlar.standart;
 
-    const aktifKasaFiyati = isSurmeSistem ? uSurmeKasa : uKasa;
-    const aktifKanatFiyati = isSurmeSistem ? uSurmeKanadi : (isKapi ? uKapiKanadi : uPencereKanadi);
+    const sonuc = hesapla(girdi, fiyatTablo);
 
-    let toplamAksesuarMaliyeti = 0;
-    kanatlar.forEach((tip) => {
-      if (tip === 'sag' || tip === 'sol') {
-        toplamAksesuarMaliyeti += isSurmeSistem ? uSurmeAksesuar : (isKapi ? uKapiAksesuar : uTekAcilim);
-      } else if (tip === 'cift_sag' || tip === 'cift_sol') {
-        toplamAksesuarMaliyeti += uCiftAcilim;
-      } else if (tip === 'vasistas') {
-        toplamAksesuarMaliyeti += uVasistas;
-      }
-    });
-
-    const profilMaliyeti = (kasaMButun * aktifKasaFiyati) + (dikmeM * uOrtakayit) + (kanatM * aktifKanatFiyati) + (yatayKayitM * uOrtakayit);
-    const camMaliyeti = Math.max(0, camM2) * (seciliCamBirimFiyati + uCamIci);
-    const lambiriMaliyeti = Math.max(0, lambiriMetrekare) * uLambiri;
-    const toplamSineklikMaliyeti = (sineklikIste && acilirAdet > 0) ? (acilirAdet * uSineklik) : 0;
-    
-    const hamImalatMaliyeti = profilMaliyeti + camMaliyeti + lambiriMaliyeti + toplamAksesuarMaliyeti + toplamSineklikMaliyeti;
-    const toplamSatisOncesi = hamImalatMaliyeti + (Number(ustaKarTL) || 0) + (Number(montajPayiTL) || 0);
-    const nihaiTeklifFiyati = kdvEkle ? Math.ceil(toplamSatisOncesi * 1.20) : Math.ceil(toplamSatisOncesi);
+    const gGen = sonuc.olculer?.genislik ?? Math.max(0, Number(turetilmisGenislik) || 0);
+    const gYuk = sonuc.olculer?.yukseklik ?? Math.max(0, Number(turetilmisYukseklik) || 0);
+    const sagYukNum = Number(turetilmisSagYukseklik);
+    const gSagYuk = Number.isFinite(sagYukNum) ? Math.max(0, sagYukNum) : gYuk;
 
     return {
       gGenislik: gGen,
       gYukseklik: gYuk,
       gSagYukseklik: gSagYuk,
-      icYukseklik: icYuk,
-      hesaplananGenislikler: hesaplananGenislikler,
-      isKapiMi: isKapi,
-      gercekLambiriVarMi: gercekLambiri,
-      hamImalatMaliyeti: Math.ceil(hamImalatMaliyeti),
-      anlikGenelToplam: nihaiTeklifFiyati
+      icYukseklik: sonuc.olculer?.icYukseklik ?? Math.max(0, gYuk - (2 * p)),
+      hesaplananGenislikler: sonuc.olculer?.bolmeGenislikleri ?? [],
+      isKapiMi: ['kapi', 'wc_kapi', 'balkonkapi'].includes(urunTipi),
+      gercekLambiriVarMi: (sonuc.metraj?.lambiriM2 ?? 0) > 0,
+      hamImalatMaliyeti: sonuc.maliyet?.ham ?? 0,
+      anlikGenelToplam: sonuc.teklifDetay?.toplam ?? 0,
+      sonuc,
     };
   }, [
-    genislik, yukseklik, sagYukseklik, manuelAci, lambiriBoyu, enineBolmeYerdenYukseklik,
-    urunTipi, aciModu, egimYonu, bolmeSayisi, bolmeOlculeri, enineBolmeVar, kanatlar,
-    renk, malzeme, camTipi, sineklikIste, altPanelLambiri, profilSerisi, fiyatTablo, p,
-    ustaKarTL, montajPayiTL, kdvEkle
+    genislik, yukseklik, sagYukseklik, manuelAci, aciModu, egimYonu,
+    profilSerisi, urunTipi, bolmeSayisi, bolmeOlculeri, kanatlar, renk,
+    camTipi, sineklikIste, enineBolmeVar, enineBolmeYerdenYukseklik,
+    altPanelLambiri, lambiriBoyu, ustaKarTL, montajPayiTL, kdvEkle,
+    fiyatTablo, p
   ]);
 
   const {
     gGenislik, gYukseklik, gSagYukseklik, icYukseklik, hesaplananGenislikler,
-    isKapiMi, gercekLambiriVarMi, hamImalatMaliyeti, anlikGenelToplam
+    isKapiMi, gercekLambiriVarMi, hamImalatMaliyeti, anlikGenelToplam, sonuc
   } = hesaplananVeriler;
 
   const anlikSpTutar = useMemo(() => {
@@ -488,11 +393,10 @@ export default function PvcCizimEkrani() {
       bolmeOlculeri: [...bolmeOlculeri],
       renk, 
       renkIsmi: profilRenkleri[renk]?.isim || 'Klasik Beyaz', 
-      camTipi, 
-      camIsmi: camFiyatlari[camTipi]?.isim || 'Standart Isıcam',
-      sineklikIste, 
-      altPanelLambiri, 
-      malzeme, 
+      camTipi,
+      camIsmi: camFiyatlari[camTipi]?.isim || 'Klasik Isıcam',
+      sineklikIste,
+      altPanelLambiri,
       lambiriBoyu,
       enineBolmeVar, 
       enineBolmeYerdenYukseklik: Number(enineBolmeYerdenYukseklik) || 800,
@@ -609,7 +513,7 @@ export default function PvcCizimEkrani() {
     }
   };
 
-  const handleYeniProje = () => { setProjeAdi(''); setMusteriTel(''); setMusteriAdres(''); setSiparisNotu(''); setSepet([]); setKalemAdi(''); setDuzenlenenKalemId(null); setMalzeme('upvc'); };
+  const handleYeniProje = () => { setProjeAdi(''); setMusteriTel(''); setMusteriAdres(''); setSiparisNotu(''); setSepet([]); setKalemAdi(''); setDuzenlenenKalemId(null); };
 
   const profilRenkleri = {
     beyaz: { isim: 'Klasik Beyaz', fill: '#fcfcfc', border: '#b0bec5', shadow: '#cfd8dc', highlight: '#ffffff' },
@@ -617,24 +521,29 @@ export default function PvcCizimEkrani() {
     altin_mese: { isim: 'Altın Meşe', fill: '#b8860b', border: '#5d4037', shadow: '#3e2723', highlight: '#daa520' }
   };
   
-  const camFiyatlari = { standart: { isim: 'Standart Isıcam' }, sinerji: { isim: 'Sinerji Cam' }, konfor: { isim: 'Konfor Cam' } };
+  const camFiyatlari = {
+    buzlu_tek: { isim: 'Buzlu Tek Cam' },
+    klasik: { isim: 'Klasik Isıcam' },
+    konfor: { isim: 'Konfor Cam' },
+    lamina: { isim: 'Lamina Cam' },
+  };
   const seciliRenk = profilRenkleri[renk] || profilRenkleri.beyaz;
-  const seciliCam = camFiyatlari[camTipi] || camFiyatlari.standart;
+  const seciliCam = camFiyatlari[camTipi] || camFiyatlari.klasik;
 
   const handleSablonYukle = (sablonTipi) => {
     setDuzenlenenKalemId(null); setEnineBolmeVar(false);
     if (sablonTipi === 'wc') {
-      setUrunTipi('wc_kapi'); setGenislik(800); setYukseklik(2100); setBolmeSayisi(1); setKanatlar(['sag']); setBolmeOlculeri([0]); setKalemAdi('WC Kapısı'); setSineklikIste(false); setMalzeme('upvc'); setLambiriBoyu(800); setAltPanelLambiri(true);
+      setUrunTipi('wc_kapi'); setGenislik(800); setYukseklik(2100); setBolmeSayisi(1); setKanatlar(['sag']); setBolmeOlculeri([0]); setKalemAdi('WC Kapısı'); setSineklikIste(false); setLambiriBoyu(800); setAltPanelLambiri(true);
     } else if (sablonTipi === 'mutfak') {
-      setUrunTipi('pencere'); setGenislik(1500); setYukseklik(1200); setBolmeSayisi(2); setKanatlar(['sabit', 'cift_sag']); setBolmeOlculeri([0, 0]); setKalemAdi('Mutfak Penceresi'); setSineklikIste(true); setMalzeme('upvc');
+      setUrunTipi('pencere'); setGenislik(1500); setYukseklik(1200); setBolmeSayisi(2); setKanatlar(['sabit', 'cift_sag']); setBolmeOlculeri([0, 0]); setKalemAdi('Mutfak Penceresi'); setSineklikIste(true);
     } else if (sablonTipi === 'fransiz') {
-      setUrunTipi('fransiz'); setGenislik(1400); setYukseklik(2100); setBolmeSayisi(2); setKanatlar(['sol', 'sag']); setBolmeOlculeri([0, 0]); setAltPanelLambiri(false); setKalemAdi('Fransız Balkon'); setMalzeme('upvc');
+      setUrunTipi('fransiz'); setGenislik(1400); setYukseklik(2100); setBolmeSayisi(2); setKanatlar(['sol', 'sag']); setBolmeOlculeri([0, 0]); setAltPanelLambiri(false); setKalemAdi('Fransız Balkon');
     } else if (sablonTipi === 'salon') {
-      setUrunTipi('pencere'); setGenislik(2100); setYukseklik(1200); setBolmeSayisi(3); setKanatlar(['sabit', 'cift_sag', 'sabit']); setBolmeOlculeri([0, 0, 0]); setKalemAdi('Salon Penceresi'); setMalzeme('upvc');
+      setUrunTipi('pencere'); setGenislik(2100); setYukseklik(1200); setBolmeSayisi(3); setKanatlar(['sabit', 'cift_sag', 'sabit']); setBolmeOlculeri([0, 0, 0]); setKalemAdi('Salon Penceresi');
     } else if (sablonTipi === 'balkon_kapi') {
-      setUrunTipi('balkonkapi'); setGenislik(900); setYukseklik(2100); setBolmeSayisi(1); setKanatlar(['sag']); setBolmeOlculeri([0]); setKalemAdi('Balkon Kapısı'); setSineklikIste(true); setMalzeme('upvc'); setLambiriBoyu(800); setAltPanelLambiri(true);
+      setUrunTipi('balkonkapi'); setGenislik(900); setYukseklik(2100); setBolmeSayisi(1); setKanatlar(['sag']); setBolmeOlculeri([0]); setKalemAdi('Balkon Kapısı'); setSineklikIste(true); setLambiriBoyu(800); setAltPanelLambiri(true);
     } else if (sablonTipi === 'surgulu_vw') {
-      setUrunTipi('surgulu'); setGenislik(2000); setYukseklik(2100); setBolmeSayisi(2); setKanatlar(['sabit', 'sag']); setBolmeOlculeri([0, 0]); setKalemAdi('Sürgülü Sistem'); setSineklikIste(false); setMalzeme('upvc');
+      setUrunTipi('surgulu'); setGenislik(2000); setYukseklik(2100); setBolmeSayisi(2); setKanatlar(['sabit', 'sag']); setBolmeOlculeri([0, 0]); setKalemAdi('Sürgülü Sistem'); setSineklikIste(false);
     }
   };
 
@@ -663,7 +572,7 @@ export default function PvcCizimEkrani() {
     if (kalem.urunTipi === 'plise_perde' || kalem.urunTipi === 'surgulu_sineklik') {
       setSpTipi(kalem.urunTipi); setSpGenislik(kalem.genislik || 800); setSpYukseklik(kalem.yukseklik || 2000); setSpRenk(kalem.renk === 'Standart' ? 'beyaz' : (kalem.renk || 'beyaz')); setSpAdet(kalem.adet || 1); handleSekmeDegistir('sineklik');
     } else {
-      setUrunTipi(kalem.urunTipi); setGenislik(kalem.genislik); setYukseklik(kalem.yukseklik); setSagYukseklik(kalem.sagYukseklik || 1600); setBolmeSayisi(kalem.bolmeSayisi); setKanatlar(kalem.kanatlar); setBolmeOlculeri(kalem.bolmeOlculeri || Array(kalem.bolmeSayisi).fill(0)); setRenk(kalem.renk); setCamTipi(kalem.camTipi || 'standart'); setSineklikIste(kalem.sineklikIste || false); setAltPanelLambiri(kalem.altPanelLambiri !== undefined ? kalem.altPanelLambiri : true); setEnineBolmeVar(kalem.enineBolmeVar || false); setEnineBolmeYerdenYukseklik(kalem.enineBolmeYerdenYukseklik || 800); setMalzeme(kalem.malzeme || 'upvc'); setLambiriBoyu(kalem.lambiriBoyu || 800); setProfilSerisi(kalem.profilSerisi || 70); setAciModu(kalem.aciModu || 'aci_bul'); setManuelAci(kalem.manuelAci || 20); setEgimYonu(kalem.egimYonu || 'saga_yukselir'); handleSekmeDegistir('cizim'); 
+      setUrunTipi(kalem.urunTipi); setGenislik(kalem.genislik); setYukseklik(kalem.yukseklik); setSagYukseklik(kalem.sagYukseklik || 1600); setBolmeSayisi(kalem.bolmeSayisi); setKanatlar(kalem.kanatlar); setBolmeOlculeri(kalem.bolmeOlculeri || Array(kalem.bolmeSayisi).fill(0)); setRenk(kalem.renk); setCamTipi(camTipiDonustur(kalem.camTipi)); setSineklikIste(kalem.sineklikIste || false); setAltPanelLambiri(kalem.altPanelLambiri !== undefined ? kalem.altPanelLambiri : true); setEnineBolmeVar(kalem.enineBolmeVar || false); setEnineBolmeYerdenYukseklik(kalem.enineBolmeYerdenYukseklik || 800); setLambiriBoyu(kalem.lambiriBoyu || 800); setProfilSerisi(kalem.profilSerisi || 70); setAciModu(kalem.aciModu || 'aci_bul'); setManuelAci(kalem.manuelAci || 20); setEgimYonu(kalem.egimYonu || 'saga_yukselir'); handleSekmeDegistir('cizim');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
@@ -993,10 +902,14 @@ export default function PvcCizimEkrani() {
               <div className="mobil-tam-genislik" style={{ padding: '12px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', flex: '1.2', display: 'flex', gap: '10px' }}>
                 <div style={{ flex: '1' }}>
                   <h4 style={{ margin: '0 0 6px 0', color: '#1E3A8A', fontSize: '13px' }}>2. Profil & Renk</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '6px' }}>
-                    <label style={{ cursor: 'pointer', fontSize: '11px', color: malzeme === 'upvc' ? '#1E3A8A' : '#666', fontWeight: malzeme === 'upvc' ? 'bold' : 'normal' }}>
-                      <input type="radio" value="upvc" checked={malzeme === 'upvc'} onChange={(e) => setMalzeme(e.target.value)} style={{ marginRight: '4px' }} /> UPVC
-                    </label>
+                  <div style={{ marginBottom: '6px' }}>
+                    <label style={{ fontSize: '11px', color: '#555', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Cam Tipi</label>
+                    <select value={camTipi} onChange={(e) => setCamTipi(e.target.value)} style={{ padding: '4px', width: '100%', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                      <option value="buzlu_tek">Buzlu Tek Cam</option>
+                      <option value="klasik">Klasik Isıcam</option>
+                      <option value="konfor">Konfor Cam</option>
+                      <option value="lamina">Lamina Cam</option>
+                    </select>
                   </div>
                   <div style={{ borderTop: '1px solid #eee', paddingTop: '6px' }}>
                     {Object.keys(profilRenkleri).map((r) => (
@@ -1099,8 +1012,13 @@ export default function PvcCizimEkrani() {
                     const currentX = hesaplananGenislikler.slice(0, index).reduce((sum, val) => sum + val, 0);
                     const kanatTipi = kanatlar[index];
                     const isSonBolme = index === bolmeSayisi - 1;
-                    
-                    let camW = Math.max(0, bg - (2 * p)); 
+
+                    // 🎯 Cam ölçü etiketleri motorun gerçek hesabından (sonuc.metraj.camParcalari) alınır
+                    const camParcalariListesi = sonuc?.metraj?.camParcalari || [];
+                    const camEtiketParcasi = camParcalariListesi.find(cp => cp.bolme === index + 1 && cp.konum !== 'alt')
+                      || camParcalariListesi.find(cp => cp.bolme === index + 1);
+
+                    let camW = Math.max(0, bg - (2 * p));
                     let camH = Math.max(0, gYukseklik - (2 * p));
                     const camX = currentX + p;
                     const camY = p;
@@ -1169,10 +1087,10 @@ export default function PvcCizimEkrani() {
                             {camW > 100 && (
                               <g>
                                 <text x={camX + camW/2} y={camY + camH/2 - 20} textAnchor="middle" fontSize="40" fill="#0288d1" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="8">
-                                  Cam En: {Math.round(camW)}
+                                  Cam En: {camEtiketParcasi ? camEtiketParcasi.en : Math.round(camW)}
                                 </text>
                                 <text x={camX + camW/2} y={camY + camH/2 + 30} textAnchor="middle" fontSize="40" fill="#dc2626" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="8">
-                                  Cam Boy: {Math.round(camH)}
+                                  Cam Boy: {camEtiketParcasi ? camEtiketParcasi.boy : Math.round(camH)}
                                 </text>
                               </g>
                             )}
@@ -1239,10 +1157,10 @@ export default function PvcCizimEkrani() {
                             {camW > 100 && (
                               <g>
                                 <text x={camX + camW/2} y={camY + camH/2 - 20} textAnchor="middle" fontSize="40" fill="#0288d1" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="8">
-                                  Cam En: {Math.round(camW)}
+                                  Cam En: {camEtiketParcasi ? camEtiketParcasi.en : Math.round(camW)}
                                 </text>
                                 <text x={camX + camW/2} y={camY + camH/2 + 30} textAnchor="middle" fontSize="40" fill="#dc2626" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="8">
-                                  Cam Boy: {Math.round(camH)}
+                                  Cam Boy: {camEtiketParcasi ? camEtiketParcasi.boy : Math.round(camH)}
                                 </text>
                               </g>
                             )}
