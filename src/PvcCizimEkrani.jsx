@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import API, { getAbonelikDurumu, abonelikBaslat } from './services/api';
-import ProfilePage from './pages/ProfilePage';
 import { useAuth } from './context/AuthContext.jsx';
 import { hesapla, hesaplaSineklik } from './utils/fiyatHesapla.js';
 import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI, sineklikRenkVarMi, CAM_TIPLERI } from './utils/fiyatTablosu.js';
@@ -34,22 +33,12 @@ export default function PvcCizimEkrani() {
   const { cikis, patronMu } = useAuth();
 
   const [aktifSekme, setAktifSekme] = useState(() => {
-    if (sessionStorage.getItem('return_to_profil') === 'true') {
-      sessionStorage.removeItem('return_to_profil');
-      return 'profil';
-    }
-    const kaydedilenSekme = localStorage.getItem('eWindoore_aktif_sekme');
-    if (kaydedilenSekme && kaydedilenSekme !== 'profil') {
-      return kaydedilenSekme;
-    }
-    return 'cizim';
+    return localStorage.getItem('eWindoore_aktif_sekme') || 'cizim';
   });
 
   const handleSekmeDegistir = (sekmeAdi) => {
     setAktifSekme(sekmeAdi);
-    if (sekmeAdi !== 'profil') {
-      localStorage.setItem('eWindoore_aktif_sekme', sekmeAdi);
-    }
+    localStorage.setItem('eWindoore_aktif_sekme', sekmeAdi);
   };
 
   // --- ABONELİK VE PAYWALL STATE'LERİ ---
@@ -657,8 +646,8 @@ export default function PvcCizimEkrani() {
               </button>
             )}
 
-            <div 
-              onClick={() => handleSekmeDegistir('profil')} 
+            <div
+              onClick={() => navigate('/profil')}
               style={{ padding: '5px 10px', borderRadius: '15px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '800', cursor: 'pointer', fontSize: '12px' }}
               title="Profil Ayarları"
             >
@@ -1460,11 +1449,6 @@ export default function PvcCizimEkrani() {
               </table>
             </div>
           </div>
-        )}
-
-        {/* 👤 7. SEKME: PROFİL SAYFASI EKRANI */}
-        {aktifSekme === 'profil' && (
-          <ProfilePage onBack={() => handleSekmeDegistir('cizim')} />
         )}
 
       </div>

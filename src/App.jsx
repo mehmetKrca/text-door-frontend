@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Register from './pages/Register'
 import Login from './pages/Login'
 import PvcCizimEkrani from './PvcCizimEkrani'
+import ProfilePage from './pages/ProfilePage'
 import { useAuth } from './context/AuthContext.jsx'
 
 // --- YENİ EKLENEN YASAL SÖZLEŞME SAYFALARI ---
@@ -44,13 +45,22 @@ function App() {
         } 
       />
 
-      <Route 
-        path="/dashboard" 
+      <Route
+        path="/dashboard"
         element={
           <KorumaliRota>
             <PvcCizimEkrani /> {/* Dashboard yerine doğrudan zengin çizim ekranına yönlendirdik */}
           </KorumaliRota>
-        } 
+        }
+      />
+
+      <Route
+        path="/profil"
+        element={
+          <KorumaliRota>
+            <ProfilePage />
+          </KorumaliRota>
+        }
       />
 
       {/* Tanımsız bir URL girilirse ana sayfaya (Vitrini) at */}

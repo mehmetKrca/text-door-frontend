@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext.jsx';
 
-export default function ProfilePage({ onBack }) {
+export default function ProfilePage() {
   const { cikis } = useAuth();
+  const navigate = useNavigate();
   // --- EKRAN DURUMU ---
   const [activeView, setActiveView] = useState('main'); 
   const [modalIcerik, setModalIcerik] = useState(null);
@@ -226,7 +228,22 @@ export default function ProfilePage({ onBack }) {
         setActiveView('main');
       }
     } catch (error) {
-      const hataMesaji = error.response?.data?.error || error.response?.data?.detail || 'Personel eklenirken bir hata oluştu. E-posta veya telefon önceden kayıtlı olabilir.';
+      const veri = error.response?.data;
+      let hataMesaji = 'Personel eklenirken bir hata oluştu. E-posta veya telefon önceden kayıtlı olabilir.';
+
+      if (typeof veri === 'string' && veri.trim()) {
+        hataMesaji = veri;
+      } else if (veri?.error) {
+        hataMesaji = Array.isArray(veri.error) ? veri.error.join(' ') : veri.error;
+      } else if (veri?.detail) {
+        hataMesaji = Array.isArray(veri.detail) ? veri.detail.join(' ') : veri.detail;
+      } else if (veri && typeof veri === 'object' && Object.keys(veri).length > 0) {
+        // DRF serializer alan bazlı doğrulama hataları: { alan: [mesaj, ...] }
+        hataMesaji = Object.entries(veri)
+          .map(([alan, mesajlar]) => `${alan}: ${Array.isArray(mesajlar) ? mesajlar.join(' ') : mesajlar}`)
+          .join('\n');
+      }
+
       alert("Hata: " + hataMesaji);
     } finally {
       setCalisanLoading(false);
@@ -289,7 +306,7 @@ export default function ProfilePage({ onBack }) {
             ‹
           </button>
         ) : (
-          <button onClick={onBack || (() => window.location.href = '/')} style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', color: '#1E3A8A' }}>
+          <button onClick={() => navigate('/cizim')} style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', color: '#1E3A8A' }}>
             ‹ Geri Dön
           </button>
         )}
