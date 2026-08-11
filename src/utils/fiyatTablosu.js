@@ -36,6 +36,15 @@ export const CAM_TIPLERI = [
 ];
 
 /* ============================================================
+   SİNEKLİK / PERDE ÜRÜN TİPLERİ
+   ============================================================ */
+export const SINEKLIK_TIPLERI = [
+  { id: 'menteseliSineklik', ad: 'Menteşeli Sineklik', kisa: 'Menteşeli' },
+  { id: 'surguluSineklik', ad: 'Sürgülü Sineklik', kisa: 'Sürgülü' },
+  { id: 'plisePerde', ad: 'Plise Perde', kisa: 'Plise' },
+];
+
+/* ============================================================
    VARSAYILAN FİYATLAR
    Tüm profil fiyatları ₺/metre, cam ₺/m², aksesuar ₺/adet
    ============================================================ */
@@ -81,31 +90,33 @@ export const VARSAYILAN_FIYATLAR = {
     surmeAksesuar: 1000,
   },
 
-  /* --- SİNEKLİK --- */
-  sineklik: {
-    cerceveM: 120,           // ₺/m — çevre profili
-    telM2: 260,              // ₺/m² — tel
-    tepeBasiBirim: 45,       // ₺/adet — DOĞRULANACAK
-    tepeBasiAdet: 2,         // adet/ürün — DOĞRULANACAK
-    iscilik: 150,            // ₺/adet
-  },
+  /* --- SİNEKLİK / PERDE ÜRÜNLERİ ---
+     Üçü de aynı formülle fiyatlanır:
+       çevre profili (m) + kumaş/tel (m²) + tepe sayısı × tepe başı + işçilik
+     Tepe sayısı = boy ÷ tepe adımı
+  */
+  tepeAdimiMM: 20,           // kumaşın kıvrım adımı — firmaya göre değişir
 
-  /* --- PLİSE PERDE --- */
+  menteseliSineklik: {
+    ad: 'Menteşeli Sineklik',
+    cerceveM: 140,
+    kumasM2: 280,
+    tepeBasiBirim: 8,
+    iscilik: 180,
+  },
+  surguluSineklik: {
+    ad: 'Sürgülü Sineklik',
+    cerceveM: 190,
+    kumasM2: 300,
+    tepeBasiBirim: 10,
+    iscilik: 250,
+  },
   plisePerde: {
+    ad: 'Plise Perde',
     cerceveM: 160,
     kumasM2: 700,
-    tepeBasiBirim: 60,       // DOĞRULANACAK
-    tepeBasiAdet: 2,         // DOĞRULANACAK
+    tepeBasiBirim: 12,
     iscilik: 200,
-  },
-
-  /* --- SÜRGÜLÜ SİNEKLİK --- */
-  surguluSineklik: {
-    cerceveM: 190,
-    telM2: 300,
-    tepeBasiBirim: 70,
-    tepeBasiAdet: 2,
-    iscilik: 250,
   },
 };
 
@@ -184,11 +195,11 @@ export function fiyatTablosunuDonustur(gelen) {
 
   // eski m² bazlı sineklik/perde fiyatları → tel/kumaş m² fiyatı olur
   const eskiSineklikAdet = say(eskiBeyaz.sineklik, 0);
-  if (eskiSineklikAdet > 0) yeni.sineklik.iscilik = eskiSineklikAdet;
+  if (eskiSineklikAdet > 0) yeni.menteseliSineklik.iscilik = eskiSineklikAdet;
   const eskiPerde = say(eskiBeyaz.plisePerdeM2, 0);
   if (eskiPerde > 0) yeni.plisePerde.kumasM2 = eskiPerde;
   const eskiSurgulu = say(eskiBeyaz.surguluSineklikM2, 0);
-  if (eskiSurgulu > 0) yeni.surguluSineklik.telM2 = eskiSurgulu;
+  if (eskiSurgulu > 0) yeni.surguluSineklik.kumasM2 = eskiSurgulu;
 
   yeni.surum = FIYAT_TABLOSU_SURUMU;
   return yeni;
@@ -249,6 +260,20 @@ export function fiyatTablosuUyarilari(tablo) {
     if (!Number.isFinite(n) || n <= 0) uyarilar.push(`${c.ad} m² fiyatı girilmemiş.`);
     else if (n > 30000) uyarilar.push(`${c.ad} fiyatı çok yüksek görünüyor (${n} ₺).`);
   });
+
+  ['menteseliSineklik', 'surguluSineklik', 'plisePerde'].forEach((k) => {
+    const u = tablo[k];
+    if (!u) { uyarilar.push(`${k} fiyatlari tanimli degil.`); return; }
+    ['cerceveM', 'kumasM2', 'iscilik'].forEach((alan) => {
+      const n = Number(u[alan]);
+      if (!Number.isFinite(n) || n < 0) uyarilar.push(`${u.ad || k}: "${alan}" fiyati girilmemis.`);
+    });
+  });
+
+  const adim = Number(tablo.tepeAdimiMM);
+  if (!Number.isFinite(adim) || adim < 5 || adim > 100) {
+    uyarilar.push('Tepe adimi gecersiz (5-100 mm arasi olmali).');
+  }
 
   return uyarilar;
 }

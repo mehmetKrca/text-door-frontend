@@ -9,7 +9,7 @@
  * Fiyatın doğruluğunun tek gerçek güvencesi budur.
  */
 
-import { hesapla } from './fiyatHesapla.js';
+import { hesapla, hesaplaSineklik } from './fiyatHesapla.js';
 import {
   VARSAYILAN_FIYATLAR,
   fiyatTablosunuDonustur,
@@ -336,6 +336,108 @@ console.log('\nTEST 11 — 500 rastgele senaryo');
     if (!Number.isFinite(s.metraj.toplamProfilM) || s.metraj.toplamProfilM < 0) sorun++;
   }
   dogru(`500 senaryoda hiç geçersiz sonuç yok (${sorun} sorun)`, sorun === 0);
+}
+
+
+/* ============================================================
+   TEST 12 — SİNEKLİK / PERDE HESABI
+   ============================================================
+   2000 × 700 plise perde, tepe adımı 20 mm
+
+   tepe sayısı = 700 ... DİKKAT: boy 2000 mm ise 2000/20 = 100 tepe
+   çerçeve = 2 × (700 + 2000) / 1000 = 5,4 m × 160 =   864,00
+   kumaş   = 700 × 2000 / 1e6 = 1,4 m² × 700       = 980,00
+   tepe    = 100 × 12                              = 1.200,00
+   işçilik                                          =   200,00
+   ------------------------------------------------------------
+   birim ham = 3.244,00
+*/
+console.log('\nTEST 12 — plise perde 700×2000');
+{
+  const s = hesaplaSineklik({
+    tip: 'plisePerde', genislik: 700, yukseklik: 2000, adet: 1,
+  }, T);
+
+  esit('tepe adımı 20 mm', s.tepeAdimi, 20);
+  esit('tepe sayısı 100', s.tepeSayisi, 100);
+  esit('çerçeve 5,4 m', s.metraj.cerceveM, 5.4, 0.01);
+  esit('kumaş 1,4 m²', s.metraj.kumasM2, 1.4, 0.01);
+  esit('çerçeve tutarı 864 ₺', s.maliyet.cerceve, 864, 2);
+  esit('kumaş tutarı 980 ₺', s.maliyet.kumas, 980, 2);
+  esit('tepe tutarı 1.200 ₺', s.maliyet.tepe, 1200, 2);
+  esit('birim ham 3.244 ₺', s.maliyet.birimHam, 3244, 3);
+  dogru('uyarı yok', s.uyarilar.length === 0);
+}
+
+console.log('\nTEST 13 — üç sineklik tipi de çalışıyor');
+{
+  ['menteseliSineklik', 'surguluSineklik', 'plisePerde'].forEach((tip) => {
+    const s = hesaplaSineklik({ tip, genislik: 700, yukseklik: 2000, adet: 1 }, T);
+    dogru(`${tip} geçerli sonuç verdi (${s.maliyet.birimHam} ₺)`, s.gecerli && s.maliyet.birimHam > 0);
+    dogru(`${tip} tepe sayısı hesaplandı (${s.tepeSayisi})`, s.tepeSayisi === 100);
+  });
+
+  const gecersiz = hesaplaSineklik({ tip: 'olmayan_tip', genislik: 700, yukseklik: 2000 }, T);
+  dogru('geçersiz tip reddedildi', gecersiz.gecerli === false);
+}
+
+console.log('\nTEST 14 — sineklik adet ve tepe adımı');
+{
+  const tek = hesaplaSineklik({ tip: 'plisePerde', genislik: 700, yukseklik: 2000, adet: 1 }, T);
+  const uc = hesaplaSineklik({ tip: 'plisePerde', genislik: 700, yukseklik: 2000, adet: 3 }, T);
+
+  esit('3 adet = 3 × tek', uc.maliyet.ham, tek.maliyet.ham * 3, 3);
+  esit('toplam tepe 300', uc.tepeSayisiToplam, 300);
+  esit('birim tepe yine 100', uc.tepeSayisi, 100);
+
+  // tepe adımı değişince tepe sayısı değişmeli
+  const tablo25 = JSON.parse(JSON.stringify(T));
+  tablo25.tepeAdimiMM = 25;
+  const s25 = hesaplaSineklik({ tip: 'plisePerde', genislik: 700, yukseklik: 2000, adet: 1 }, tablo25);
+  esit('25 mm adımda 80 tepe', s25.tepeSayisi, 80);
+  dogru('25 mm adımda maliyet düştü', s25.maliyet.tepe < tek.maliyet.tepe);
+}
+
+console.log('\nTEST 15 — doğramada artık zorunlu sineklik yok');
+{
+  const sineklikli = hesapla({
+    urunTipi: 'pencere', genislik: 1500, yukseklik: 1200,
+    bolmeSayisi: 2, kanatlar: ['sabit', 'sag'],
+    renk: 'beyaz', camTipi: 'klasik', profilSerisi: 70, adet: 1,
+    sineklikIste: true,
+  }, T);
+  const sinekliksiz = hesapla({
+    urunTipi: 'pencere', genislik: 1500, yukseklik: 1200,
+    bolmeSayisi: 2, kanatlar: ['sabit', 'sag'],
+    renk: 'beyaz', camTipi: 'klasik', profilSerisi: 70, adet: 1,
+    sineklikIste: false,
+  }, T);
+
+  esit('sineklik kalemi sıfır', sineklikli.maliyet.sineklik, 0);
+  esit('iki hesap aynı', sineklikli.maliyet.ham, sinekliksiz.maliyet.ham);
+  esit('doğrama maliyeti 3.815 ₺ olarak kaldı', sineklikli.maliyet.ham, 3815, 4);
+}
+
+console.log('\nTEST 16 — sineklikte bozuk girdi dayanıklılığı');
+{
+  const senaryolar = [
+    { ad: 'boş', g: {} },
+    { ad: 'negatif', g: { tip: 'plisePerde', genislik: -700, yukseklik: -2000 } },
+    { ad: 'metin', g: { tip: 'plisePerde', genislik: 'abc', yukseklik: 'x' } },
+    { ad: 'adet 0', g: { tip: 'plisePerde', genislik: 700, yukseklik: 2000, adet: 0 } },
+    { ad: 'çok büyük', g: { tip: 'plisePerde', genislik: 99999, yukseklik: 99999 } },
+  ];
+  senaryolar.forEach(({ ad, g }) => {
+    let s;
+    try { s = hesaplaSineklik(g, T); }
+    catch (e) { kalan++; console.log(`  ✗ ${ad} — HATA: ${e.message}`); return; }
+    dogru(`${ad} → geçerli sayı (${s.teklifDetay.toplam} ₺)`, Number.isFinite(s.teklifDetay.toplam) && s.teklifDetay.toplam >= 0);
+  });
+
+  const bozukTablo = JSON.parse(JSON.stringify(T));
+  delete bozukTablo.plisePerde;
+  const s = hesaplaSineklik({ tip: 'plisePerde', genislik: 700, yukseklik: 2000 }, bozukTablo);
+  dogru('tablo eksikse uyarı verir, çökmez', s.gecerli === false && s.uyarilar.length > 0);
 }
 
 /* ============================================================

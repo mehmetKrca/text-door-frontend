@@ -3,8 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import API, { getAbonelikDurumu, abonelikBaslat } from './services/api';
 import ProfilePage from './pages/ProfilePage';
 import { useAuth } from './context/AuthContext.jsx';
-import { hesapla } from './utils/fiyatHesapla.js';
-import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur } from './utils/fiyatTablosu.js';
+import { hesapla, hesaplaSineklik } from './utils/fiyatHesapla.js';
+import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI } from './utils/fiyatTablosu.js';
+import DogramaCizim from './components/DogramaCizim.jsx';
 
 // 🎯 TOKEN ALMA YARDIMCI FONKSİYONU
 const getAuthToken = () => {
@@ -18,6 +19,12 @@ const camTipiDonustur = (deger) => {
   if (deger === 'standart' || deger === 'sinerji') return 'klasik';
   return deger || 'klasik';
 };
+
+// 🎯 ESKİ SİNEKLİK/PERDE ÜRÜN TİPİ DEĞERLERİNİ YENİ ŞEMAYA TAŞIR
+const SP_TIPI_ESKI_YENI = { surgulu_sineklik: 'surguluSineklik', plise_perde: 'plisePerde' };
+const spTipiDonustur = (deger) => SP_TIPI_ESKI_YENI[deger] || deger || 'menteseliSineklik';
+// Rapor/arşiv taramalarında hem eski hem yeni sineklik/perde id'lerini yakalamak için
+const SP_URUN_TIPLERI_TUMU = ['menteseliSineklik', 'surguluSineklik', 'plisePerde', 'surgulu_sineklik', 'plise_perde'];
 
 export default function PvcCizimEkrani() {
   const navigate = useNavigate();
@@ -204,13 +211,11 @@ export default function PvcCizimEkrani() {
   const p = Number(profilSerisi) || 70;
   
   const [camTipi, setCamTipi] = useState('klasik');
-  const [sineklikIste, setSineklikIste] = useState(true);
   const [altPanelLambiri, setAltPanelLambiri] = useState(true);
 
-  const [spTipi, setSpTipi] = useState('surgulu_sineklik'); 
+  const [spTipi, setSpTipi] = useState('menteseliSineklik');
   const [spGenislik, setSpGenislik] = useState(800);
   const [spYukseklik, setSpYukseklik] = useState(2000);
-  const [spRenk, setSpRenk] = useState('beyaz');
   const [spAdet, setSpAdet] = useState(1);
 
   const [aktifRenkSekmesi, setAktifRenkSekmesi] = useState('beyaz');
@@ -246,15 +251,18 @@ export default function PvcCizimEkrani() {
     fiyatlariBuluttanGetir();
   }, []);
 
-  const handleFiyatDegisimi = (seciliRenk, alan, deger) => {
+  // yol: ic ice fiyatTablo anahtarlarina giden dizi. Ornek: ['seriler','beyaz','kasa'], ['camlar','klasik'], ['camIsciligi'], ['aksesuarlar','tekAcilim']
+  const handleFiyatDegisimi = (yol, deger) => {
     const guncelDeger = deger === '' ? '' : Number(deger);
-    setFiyatTablo(prev => ({
-      ...prev,
-      [seciliRenk]: {
-        ...prev[seciliRenk],
-        [alan]: guncelDeger
+    setFiyatTablo(prev => {
+      const kopya = JSON.parse(JSON.stringify(prev));
+      let hedef = kopya;
+      for (let i = 0; i < yol.length - 1; i++) {
+        hedef = hedef[yol[i]];
       }
-    }));
+      hedef[yol[yol.length - 1]] = guncelDeger;
+      return kopya;
+    });
   };
 
   const handleFiyatlariBulutaKaydet = async () => {
@@ -321,7 +329,6 @@ export default function PvcCizimEkrani() {
       kanatlar,
       renk,
       camTipi,
-      sineklikIste,
       enineBolmeVar,
       enineBolmeYerdenYukseklik,
       lambiriVar: altPanelLambiri,
@@ -354,7 +361,7 @@ export default function PvcCizimEkrani() {
   }, [
     genislik, yukseklik, sagYukseklik, manuelAci, aciModu, egimYonu,
     profilSerisi, urunTipi, bolmeSayisi, bolmeOlculeri, kanatlar, renk,
-    camTipi, sineklikIste, enineBolmeVar, enineBolmeYerdenYukseklik,
+    camTipi, enineBolmeVar, enineBolmeYerdenYukseklik,
     altPanelLambiri, lambiriBoyu, ustaKarTL, montajPayiTL, kdvEkle,
     fiyatTablo, p
   ]);
@@ -364,14 +371,15 @@ export default function PvcCizimEkrani() {
     isKapiMi, gercekLambiriVarMi, hamImalatMaliyeti, anlikGenelToplam, sonuc
   } = hesaplananVeriler;
 
-  const anlikSpTutar = useMemo(() => {
-    const spAlanM2 = (Number(spGenislik) * Number(spYukseklik)) / 1000000;
-    const spBirimFiyat = spTipi === 'plise_perde' 
-      ? (Number(fiyatTablo.beyaz.plisePerdeM2) || 0) 
-      : (Number(fiyatTablo[spRenk]?.surguluSineklikM2) || 0); 
-    
-    return Math.ceil(spAlanM2 * spBirimFiyat * (Number(spAdet) || 1));
-  }, [spGenislik, spYukseklik, spTipi, spRenk, spAdet, fiyatTablo]);
+  const sineklikSonucu = useMemo(() => {
+    const girdi = {
+      genislik: spGenislik,
+      yukseklik: spYukseklik,
+      adet: spAdet,
+      tip: spTipi,
+    };
+    return hesaplaSineklik(girdi, fiyatTablo);
+  }, [spGenislik, spYukseklik, spAdet, spTipi, fiyatTablo]);
 
   const sepetGenelToplam = useMemo(() => sepet.reduce((acc, kalem) => acc + (Number(kalem.fiyat) || 0), 0), [sepet]);
   const sepetToplamAdet = useMemo(() => sepet.reduce((acc, kalem) => acc + (Number(kalem.adet) || 1), 0), [sepet]);
@@ -395,7 +403,6 @@ export default function PvcCizimEkrani() {
       renkIsmi: profilRenkleri[renk]?.isim || 'Klasik Beyaz', 
       camTipi,
       camIsmi: camFiyatlari[camTipi]?.isim || 'Klasik Isıcam',
-      sineklikIste,
       altPanelLambiri,
       lambiriBoyu,
       enineBolmeVar, 
@@ -414,20 +421,21 @@ export default function PvcCizimEkrani() {
   };
 
   const handleSpSepeteEkle = () => {
-    const defaultIsim = spTipi === 'plise_perde' ? 'Plise Perde' : 'Sürgülü Sineklik';
+    const defaultIsim = SINEKLIK_TIPLERI.find(t => t.id === spTipi)?.ad || 'Sineklik';
     const kalemIsmi = kalemAdi.trim() === '' ? `${defaultIsim} ${sepet.length + 1}` : kalemAdi;
-    const anlikTutar = Number(anlikSpTutar) || 0;
+    const anlikTutar = Number(sineklikSonucu.teklifDetay?.toplam) || 0;
     const hedefId = duzenlenenKalemId ? duzenlenenKalemId : Date.now();
 
     const yeniKalem = {
       id: hedefId,
       isim: kalemIsmi,
-      urunTipi: spTipi, 
-      genislik: Number(spGenislik), 
-      yukseklik: Number(spYukseklik), 
+      urunTipi: spTipi,
+      genislik: Number(spGenislik),
+      yukseklik: Number(spYukseklik),
       adet: Number(spAdet) || 1,
-      renk: spTipi === 'surgulu_sineklik' ? spRenk : 'Standart',
-      renkIsmi: spTipi === 'surgulu_sineklik' ? (profilRenkleri[spRenk]?.isim || 'Klasik Beyaz') : 'Standart',
+      renk: 'Standart',
+      renkIsmi: 'Standart',
+      tepeSayisi: sineklikSonucu.tepeSayisi,
       fiyat: Math.ceil(anlikTutar)
     };
 
@@ -533,17 +541,17 @@ export default function PvcCizimEkrani() {
   const handleSablonYukle = (sablonTipi) => {
     setDuzenlenenKalemId(null); setEnineBolmeVar(false);
     if (sablonTipi === 'wc') {
-      setUrunTipi('wc_kapi'); setGenislik(800); setYukseklik(2100); setBolmeSayisi(1); setKanatlar(['sag']); setBolmeOlculeri([0]); setKalemAdi('WC Kapısı'); setSineklikIste(false); setLambiriBoyu(800); setAltPanelLambiri(true);
+      setUrunTipi('wc_kapi'); setGenislik(800); setYukseklik(2100); setBolmeSayisi(1); setKanatlar(['sag']); setBolmeOlculeri([0]); setKalemAdi('WC Kapısı'); setLambiriBoyu(800); setAltPanelLambiri(true);
     } else if (sablonTipi === 'mutfak') {
-      setUrunTipi('pencere'); setGenislik(1500); setYukseklik(1200); setBolmeSayisi(2); setKanatlar(['sabit', 'cift_sag']); setBolmeOlculeri([0, 0]); setKalemAdi('Mutfak Penceresi'); setSineklikIste(true);
+      setUrunTipi('pencere'); setGenislik(1500); setYukseklik(1200); setBolmeSayisi(2); setKanatlar(['sabit', 'cift_sag']); setBolmeOlculeri([0, 0]); setKalemAdi('Mutfak Penceresi');
     } else if (sablonTipi === 'fransiz') {
       setUrunTipi('fransiz'); setGenislik(1400); setYukseklik(2100); setBolmeSayisi(2); setKanatlar(['sol', 'sag']); setBolmeOlculeri([0, 0]); setAltPanelLambiri(false); setKalemAdi('Fransız Balkon');
     } else if (sablonTipi === 'salon') {
       setUrunTipi('pencere'); setGenislik(2100); setYukseklik(1200); setBolmeSayisi(3); setKanatlar(['sabit', 'cift_sag', 'sabit']); setBolmeOlculeri([0, 0, 0]); setKalemAdi('Salon Penceresi');
     } else if (sablonTipi === 'balkon_kapi') {
-      setUrunTipi('balkonkapi'); setGenislik(900); setYukseklik(2100); setBolmeSayisi(1); setKanatlar(['sag']); setBolmeOlculeri([0]); setKalemAdi('Balkon Kapısı'); setSineklikIste(true); setLambiriBoyu(800); setAltPanelLambiri(true);
+      setUrunTipi('balkonkapi'); setGenislik(900); setYukseklik(2100); setBolmeSayisi(1); setKanatlar(['sag']); setBolmeOlculeri([0]); setKalemAdi('Balkon Kapısı'); setLambiriBoyu(800); setAltPanelLambiri(true);
     } else if (sablonTipi === 'surgulu_vw') {
-      setUrunTipi('surgulu'); setGenislik(2000); setYukseklik(2100); setBolmeSayisi(2); setKanatlar(['sabit', 'sag']); setBolmeOlculeri([0, 0]); setKalemAdi('Sürgülü Sistem'); setSineklikIste(false);
+      setUrunTipi('surgulu'); setGenislik(2000); setYukseklik(2100); setBolmeSayisi(2); setKanatlar(['sabit', 'sag']); setBolmeOlculeri([0, 0]); setKalemAdi('Sürgülü Sistem');
     }
   };
 
@@ -569,10 +577,10 @@ export default function PvcCizimEkrani() {
 
   const handleKalemiDuzenle = (kalem) => {
     setDuzenlenenKalemId(kalem.id); setKalemAdi(kalem.isim);
-    if (kalem.urunTipi === 'plise_perde' || kalem.urunTipi === 'surgulu_sineklik') {
-      setSpTipi(kalem.urunTipi); setSpGenislik(kalem.genislik || 800); setSpYukseklik(kalem.yukseklik || 2000); setSpRenk(kalem.renk === 'Standart' ? 'beyaz' : (kalem.renk || 'beyaz')); setSpAdet(kalem.adet || 1); handleSekmeDegistir('sineklik');
+    if (SP_URUN_TIPLERI_TUMU.includes(kalem.urunTipi)) {
+      setSpTipi(spTipiDonustur(kalem.urunTipi)); setSpGenislik(kalem.genislik || 800); setSpYukseklik(kalem.yukseklik || 2000); setSpAdet(kalem.adet || 1); handleSekmeDegistir('sineklik');
     } else {
-      setUrunTipi(kalem.urunTipi); setGenislik(kalem.genislik); setYukseklik(kalem.yukseklik); setSagYukseklik(kalem.sagYukseklik || 1600); setBolmeSayisi(kalem.bolmeSayisi); setKanatlar(kalem.kanatlar); setBolmeOlculeri(kalem.bolmeOlculeri || Array(kalem.bolmeSayisi).fill(0)); setRenk(kalem.renk); setCamTipi(camTipiDonustur(kalem.camTipi)); setSineklikIste(kalem.sineklikIste || false); setAltPanelLambiri(kalem.altPanelLambiri !== undefined ? kalem.altPanelLambiri : true); setEnineBolmeVar(kalem.enineBolmeVar || false); setEnineBolmeYerdenYukseklik(kalem.enineBolmeYerdenYukseklik || 800); setLambiriBoyu(kalem.lambiriBoyu || 800); setProfilSerisi(kalem.profilSerisi || 70); setAciModu(kalem.aciModu || 'aci_bul'); setManuelAci(kalem.manuelAci || 20); setEgimYonu(kalem.egimYonu || 'saga_yukselir'); handleSekmeDegistir('cizim');
+      setUrunTipi(kalem.urunTipi); setGenislik(kalem.genislik); setYukseklik(kalem.yukseklik); setSagYukseklik(kalem.sagYukseklik || 1600); setBolmeSayisi(kalem.bolmeSayisi); setKanatlar(kalem.kanatlar); setBolmeOlculeri(kalem.bolmeOlculeri || Array(kalem.bolmeSayisi).fill(0)); setRenk(kalem.renk); setCamTipi(camTipiDonustur(kalem.camTipi)); setAltPanelLambiri(kalem.altPanelLambiri !== undefined ? kalem.altPanelLambiri : true); setEnineBolmeVar(kalem.enineBolmeVar || false); setEnineBolmeYerdenYukseklik(kalem.enineBolmeYerdenYukseklik || 800); setLambiriBoyu(kalem.lambiriBoyu || 800); setProfilSerisi(kalem.profilSerisi || 70); setAciModu(kalem.aciModu || 'aci_bul'); setManuelAci(kalem.manuelAci || 20); setEgimYonu(kalem.egimYonu || 'saga_yukselir'); handleSekmeDegistir('cizim');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
@@ -610,7 +618,7 @@ export default function PvcCizimEkrani() {
     if (arsiv.sepet && Array.isArray(arsiv.sepet)) {
       arsiv.sepet.forEach(item => {
         let adet = Number(item.adet) || 1;
-        if (item.urunTipi === 'surgulu_sineklik' || item.urunTipi === 'plise_perde') {
+        if (SP_URUN_TIPLERI_TUMU.includes(item.urunTipi)) {
           raporSineklikM2 += ((Number(item.genislik) * Number(item.yukseklik)) / 1000000) * adet;
         } else {
           let pVal = Number(item.profilSerisi) || 70;
@@ -801,7 +809,7 @@ export default function PvcCizimEkrani() {
           <button className="sekme-buton" onClick={() => handleSekmeDegistir('cizim')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'cizim' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'cizim' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Doğrama ve Çizim</button>
           <button className="sekme-buton" onClick={() => handleSekmeDegistir('sineklik')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'sineklik' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'sineklik' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Sineklik ve Perde</button>
           <button className="sekme-buton" onClick={() => handleSekmeDegistir('sepet')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'sepet' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'sepet' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Sipariş Sepeti ({sepetToplamAdet})</button>
-          <button className="sekme-buton" onClick={() => handleSekmeDegistir('fiyatlar')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'fiyatlar' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'fiyatlar' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Ayarlar</button>
+          <button className="sekme-buton" onClick={() => handleSekmeDegistir('fiyatlar')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'fiyatlar' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'fiyatlar' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Fiyat Ayarları</button>
           <button className="sekme-buton" onClick={() => handleSekmeDegistir('arsiv')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'arsiv' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'arsiv' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>📑 CRM Arşiv</button>
           {aktifRol === 'patron' && (
             <button className="sekme-buton" onClick={() => handleSekmeDegistir('patron')} style={{ flex: 1, padding: '10px 4px', backgroundColor: aktifSekme === 'patron' ? '#1E3A8A' : '#ffffff', color: aktifSekme === 'patron' ? '#ffffff' : '#1E3A8A', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>📊 Patron Özeti</button>
@@ -943,236 +951,22 @@ export default function PvcCizimEkrani() {
 
             {/* 🎯 TEKNİK ÇİZİM ALANI (YÜKSEK KONTRASTLI BÜYÜK YAZILAR + MENTEŞE/KOL/LAMBİRİ/ORTA KAYIT DETAYLI) */}
             <div className="mobil-tam-genislik cizim-svg-kapsayici" style={{ border: '1px solid #cbd5e1', padding: '12px 10px', backgroundColor: '#ffffff', borderRadius: '8px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', marginBottom: '14px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <svg viewBox={`-130 -50 ${(gGenislik || 1000) + 160} ${Math.max(gYukseklik, gSagYukseklik) + 210}`} style={{ width: '100%', maxWidth: '850px', height: 'auto', overflow: 'visible', margin: '0 auto' }}>
-                <defs>
-                  <linearGradient id="proCamGradyan" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#e1f5fe" stopOpacity="0.95" />
-                    <stop offset="40%" stopColor="#b3e5fc" stopOpacity="0.7" />
-                    <stop offset="100%" stopColor="#81d4fa" stopOpacity="0.8" />
-                  </linearGradient>
-                  <filter id="profilGolge" x="-10%" y="-10%" width="120%" height="120%">
-                    <feDropShadow dx="2" dy="4" stdDeviation="3" floodColor="#000000" floodOpacity="0.2" />
-                  </filter>
-                </defs>
-
-                {/* Yükseklik (Sol) */}
-                <g stroke="#000000" strokeWidth="3" fill="none">
-                   <line x1="-40" y1="0" x2="-40" y2={gYukseklik} />
-                   <line x1="-55" y1="0" x2="-25" y2="0" />
-                   <line x1="-55" y1={gYukseklik} x2="-25" y2={gYukseklik} />
-                </g>
-                <text x="-65" y={gYukseklik / 2} transform={`rotate(-90, -65, ${gYukseklik / 2})`} textAnchor="middle" fill="#000000" fontSize="52" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="6">{Math.round(gYukseklik)}</text>
-
-                {/* Bölme Ölçüleri (750 / 750 mm vb.) */}
-                {hesaplananGenislikler.map((bg, i) => {
-                  const cx = hesaplananGenislikler.slice(0, i).reduce((sum, val) => sum + val, 0);
-                  const mid = cx + (bg / 2);
-                  const isLast = i === hesaplananGenislikler.length - 1;
-                  return (
-                    <g key={`dim-${i}`}>
-                      <line x1={cx} y1={gYukseklik + 40} x2={cx + bg} y2={gYukseklik + 40} stroke="#000000" strokeWidth="2.5" />
-                      <line x1={cx} y1={gYukseklik + 25} x2={cx} y2={gYukseklik + 55} stroke="#000000" strokeWidth="2.5" />
-                      {isLast && <line x1={cx + bg} y1={gYukseklik + 25} x2={cx + bg} y2={gYukseklik + 55} stroke="#000000" strokeWidth="2.5" />}
-                      <text x={mid} y={gYukseklik + 35} textAnchor="middle" fill="#000000" fontSize="42" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="6">{Math.round(bg)}</text>
-                      {bolmeOlculeri[i] === 0 && <text x={mid} y={gYukseklik + 68} textAnchor="middle" fill="#666666" fontSize="24" fontWeight="bold">Auto</text>}
-                    </g>
-                  );
-                })}
-
-                {/* Toplam Genişlik Çizgisi (En Alt) */}
-                <g stroke="#000000" strokeWidth="3" fill="none">
-                   <line x1="0" y1={gYukseklik + 110} x2={gGenislik} y2={gYukseklik + 110} />
-                   <line x1="0" y1={gYukseklik + 95} x2="0" y2={gYukseklik + 125} />
-                   <line x1={gGenislik} y1={gYukseklik + 95} x2={gGenislik} y2={gYukseklik + 125} />
-                </g>
-                <text x={gGenislik / 2} y={gYukseklik + 105} textAnchor="middle" fill="#000000" fontSize="52" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="6">{Math.round(gGenislik)}</text>
-
-                {/* Pencere / Kapı Gövdesi */}
-                <g>
-                  <rect x="0" y="0" width={gGenislik} height={gYukseklik} fill={seciliRenk.shadow} rx="4" />
-                  <rect x="0" y="0" width={gGenislik} height={gYukseklik} fill={seciliRenk.fill} stroke={seciliRenk.border} strokeWidth="10" rx="4" filter="url(#profilGolge)" />
-                  <rect x={p*0.3} y={p*0.3} width={gGenislik - (p*0.6)} height={gYukseklik - (p*0.6)} fill="none" stroke={seciliRenk.border} strokeWidth="2.5" opacity="0.6" />
-
-                  {/* 🎯 ENİNE BÖLME / ORTA KAYIT PROFİLİ (SVG ÇİZİMİ) */}
-                  {enineBolmeVar && (
-                    <g>
-                      <rect 
-                        x="0" 
-                        y={Math.max(p, gYukseklik - Number(enineBolmeYerdenYukseklik) - (p/2))} 
-                        width={gGenislik} 
-                        height={p} 
-                        fill={seciliRenk.fill} 
-                        stroke={seciliRenk.border} 
-                        strokeWidth="3" 
-                      />
-                    </g>
-                  )}
-
-                  {hesaplananGenislikler.map((bg, index) => {
-                    const currentX = hesaplananGenislikler.slice(0, index).reduce((sum, val) => sum + val, 0);
-                    const kanatTipi = kanatlar[index];
-                    const isSonBolme = index === bolmeSayisi - 1;
-
-                    // 🎯 Cam ölçü etiketleri motorun gerçek hesabından (sonuc.metraj.camParcalari) alınır
-                    const camParcalariListesi = sonuc?.metraj?.camParcalari || [];
-                    const camEtiketParcasi = camParcalariListesi.find(cp => cp.bolme === index + 1 && cp.konum !== 'alt')
-                      || camParcalariListesi.find(cp => cp.bolme === index + 1);
-
-                    let camW = Math.max(0, bg - (2 * p));
-                    let camH = Math.max(0, gYukseklik - (2 * p));
-                    const camX = currentX + p;
-                    const camY = p;
-
-                    // Lambiri Varsa Cam Boyu Daralır
-                    const lambiriAktif = isKapiMi && gercekLambiriVarMi;
-                    const cLambiriYukseklik = lambiriAktif ? Math.min(camH - 100, Number(lambiriBoyu) || 800) : 0;
-                    if (lambiriAktif) {
-                      camH -= cLambiriYukseklik;
-                    }
-
-                    // 🎯 ÇİFT AÇILIM (ÇİFT ÇİZGİ) YÖN ÇİZGİLERİ
-                    let cizgi1 = ""; 
-                    let cizgi2 = "";
-                    if (kanatTipi !== 'sabit') {
-                      const sagCizgi = `M ${camX + camW} ${camY} L ${camX} ${camY + (camH/2)} L ${camX + camW} ${camY + camH}`;
-                      const solCizgi = `M ${camX} ${camY} L ${camX + camW} ${camY + (camH/2)} L ${camX} ${camY + camH}`;
-                      const vasistasCizgi = `M ${camX} ${camY + camH} L ${camX + (camW/2)} ${camY} L ${camX + camW} ${camY + camH}`;
-
-                      if (kanatTipi === 'sag') cizgi1 = sagCizgi;
-                      else if (kanatTipi === 'sol') cizgi1 = solCizgi;
-                      else if (kanatTipi === 'vasistas') cizgi1 = vasistasCizgi;
-                      else if (kanatTipi === 'cift_sag') { cizgi1 = sagCizgi; cizgi2 = vasistasCizgi; }
-                      else if (kanatTipi === 'cift_sol') { cizgi1 = solCizgi; cizgi2 = vasistasCizgi; }
-                    }
-
-                    return (
-                      <g key={`bolme-${index}`}>
-                        {kanatTipi !== 'sabit' ? (
-                          <g>
-                            <rect x={currentX + (p/2)} y={p/2} width={bg - p} height={gYukseklik - p} fill={seciliRenk.fill} stroke={seciliRenk.border} strokeWidth="4" rx="2" />
-                            
-                            {/* Cam Alanı */}
-                            <rect x={camX} y={camY} width={camW} height={camH} fill="url(#proCamGradyan)" stroke="#78909c" strokeWidth="2" />
-                            
-                            {/* 🎯 LAMBİRİ PANELİ ÇİZİMİ */}
-                            {lambiriAktif && (
-                              <g>
-                                <rect 
-                                  x={camX} 
-                                  y={camY + camH} 
-                                  width={camW} 
-                                  height={cLambiriYukseklik} 
-                                  fill={seciliRenk.fill} 
-                                  stroke={seciliRenk.border} 
-                                  strokeWidth="3" 
-                                />
-                                {Array.from({ length: Math.max(2, Math.floor(camW / 80)) }).map((_, lIdx) => (
-                                  <line 
-                                    key={`l-line-${lIdx}`} 
-                                    x1={camX + (lIdx + 1) * (camW / (Math.floor(camW / 80) + 1))} 
-                                    y1={camY + camH} 
-                                    x2={camX + (lIdx + 1) * (camW / (Math.floor(camW / 80) + 1))} 
-                                    y2={camY + camH + cLambiriYukseklik} 
-                                    stroke={seciliRenk.border} 
-                                    strokeWidth="1.5" 
-                                  />
-                                ))}
-                                <text x={camX + camW/2} y={camY + camH + cLambiriYukseklik/2 + 8} textAnchor="middle" fontSize="32" fill="#000000" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="6">
-                                  Lambiri Panel
-                                </text>
-                              </g>
-                            )}
-
-                            {/* 🎯 BÜYÜTÜLMÜŞ VE BEYAZ DIŞ KONTURLU "CAM EN" VE "CAM BOY" YAZISI */}
-                            {camW > 100 && (
-                              <g>
-                                <text x={camX + camW/2} y={camY + camH/2 - 20} textAnchor="middle" fontSize="40" fill="#0288d1" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="8">
-                                  Cam En: {camEtiketParcasi ? camEtiketParcasi.en : Math.round(camW)}
-                                </text>
-                                <text x={camX + camW/2} y={camY + camH/2 + 30} textAnchor="middle" fontSize="40" fill="#dc2626" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="8">
-                                  Cam Boy: {camEtiketParcasi ? camEtiketParcasi.boy : Math.round(camH)}
-                                </text>
-                              </g>
-                            )}
-                            
-                            {/* Açılım Yön Çizgileri (Çift Açılımda 2 Çizgi) */}
-                            {cizgi1 && <path d={cizgi1} stroke="#0288d1" fill="none" strokeWidth="3.5" strokeDasharray="15,10" />}
-                            {cizgi2 && <path d={cizgi2} stroke="#0288d1" fill="none" strokeWidth="3.5" strokeDasharray="15,10" />}
-                            
-                            {/* Kapı/Pencere Kolu ve Menteşeler */}
-                            <g>
-                              <rect 
-                                x={kanatTipi.includes('sag') ? currentX + p + 10 : currentX + bg - p - 18} 
-                                y={gYukseklik/2 - 25} 
-                                width="10" 
-                                height="50" 
-                                rx="3" 
-                                fill="#0f172a" 
-                                stroke="#ffffff" 
-                                strokeWidth="2" 
-                              />
-                              <circle 
-                                cx={kanatTipi.includes('sag') ? currentX + p + 15 : currentX + bg - p - 13} 
-                                cy={gYukseklik/2} 
-                                r="6" 
-                                fill="#0288d1" 
-                              />
-                              <rect x={kanatTipi.includes('sag') ? currentX + bg - (p/2) - 5 : currentX + (p/2) - 2} y={p + 40} width="7" height="32" fill="#334155" rx="1" />
-                              <rect x={kanatTipi.includes('sag') ? currentX + bg - (p/2) - 5 : currentX + (p/2) - 2} y={gYukseklik - p - 70} width="7" height="32" fill="#334155" rx="1" />
-                            </g>
-                          </g>
-                        ) : (
-                          <g>
-                            <rect x={camX} y={camY} width={camW} height={camH} fill="url(#proCamGradyan)" stroke="#78909c" strokeWidth="2" />
-                            
-                            {/* Sabit Camda Lambiri Varsa */}
-                            {lambiriAktif && (
-                              <g>
-                                <rect 
-                                  x={camX} 
-                                  y={camY + camH} 
-                                  width={camW} 
-                                  height={cLambiriYukseklik} 
-                                  fill={seciliRenk.fill} 
-                                  stroke={seciliRenk.border} 
-                                  strokeWidth="3" 
-                                />
-                                {Array.from({ length: Math.max(2, Math.floor(camW / 80)) }).map((_, lIdx) => (
-                                  <line 
-                                    key={`sl-line-${lIdx}`} 
-                                    x1={camX + (lIdx + 1) * (camW / (Math.floor(camW / 80) + 1))} 
-                                    y1={camY + camH} 
-                                    x2={camX + (lIdx + 1) * (camW / (Math.floor(camW / 80) + 1))} 
-                                    y2={camY + camH + cLambiriYukseklik} 
-                                    stroke={seciliRenk.border} 
-                                    strokeWidth="1.5" 
-                                  />
-                                ))}
-                                <text x={camX + camW/2} y={camY + camH + cLambiriYukseklik/2 + 8} textAnchor="middle" fontSize="32" fill="#000000" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="6">
-                                  Lambiri Panel
-                                </text>
-                              </g>
-                            )}
-
-                            {camW > 100 && (
-                              <g>
-                                <text x={camX + camW/2} y={camY + camH/2 - 20} textAnchor="middle" fontSize="40" fill="#0288d1" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="8">
-                                  Cam En: {camEtiketParcasi ? camEtiketParcasi.en : Math.round(camW)}
-                                </text>
-                                <text x={camX + camW/2} y={camY + camH/2 + 30} textAnchor="middle" fontSize="40" fill="#dc2626" fontWeight="900" paintOrder="stroke fill" stroke="#ffffff" strokeWidth="8">
-                                  Cam Boy: {camEtiketParcasi ? camEtiketParcasi.boy : Math.round(camH)}
-                                </text>
-                              </g>
-                            )}
-                          </g>
-                        )}
-                        
-                        {!isSonBolme && <rect x={currentX + bg - (p/2)} y={0} width={p} height={gYukseklik} fill={seciliRenk.fill} stroke={seciliRenk.border} strokeWidth="3" />}
-                      </g>
-                    );
-                  })}
-                </g>
-              </svg>
+              <DogramaCizim
+                urunTipi={urunTipi}
+                genislik={gGenislik}
+                yukseklik={gYukseklik}
+                sagYukseklik={gSagYukseklik}
+                bolmeSayisi={bolmeSayisi}
+                bolmeGenislikleri={hesaplananGenislikler}
+                kanatlar={kanatlar}
+                renkId={renk}
+                profilSerisi={profilSerisi}
+                lambiriVar={gercekLambiriVarMi}
+                lambiriBoyu={lambiriBoyu}
+                enineBolmeVar={enineBolmeVar}
+                enineBolmeYuksekligi={enineBolmeYerdenYukseklik}
+                camParcalari={sonuc?.metraj?.camParcalari}
+              />
             </div>
 
             {/* MALİYET KUTUSU */}
@@ -1245,8 +1039,9 @@ export default function PvcCizimEkrani() {
               <div className="mobil-tam-genislik" style={{ padding: '12px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', flex: '1', minWidth: '260px' }}>
                 <h4 style={{ margin: '0 0 8px 0', color: '#1E3A8A', fontSize: '14px' }}>1. Ürün Tipi ve Ölçüler</h4>
                 <select value={spTipi} onChange={(e) => setSpTipi(e.target.value)} style={{ padding: '8px', width: '100%', marginBottom: '12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }}>
-                  <option value="surgulu_sineklik">Sürgülü Sineklik</option>
-                  <option value="plise_perde">Plise Perde</option>
+                  {SINEKLIK_TIPLERI.map(t => (
+                    <option key={t.id} value={t.id}>{t.ad}</option>
+                  ))}
                 </select>
 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
@@ -1255,23 +1050,9 @@ export default function PvcCizimEkrani() {
                   <label style={{ flex: '0.6', fontSize: '12px' }}>Adet: <input type="number" value={spAdet} onChange={e => setSpAdet(e.target.value === '' ? '' : Number(e.target.value))} style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/></label>
                 </div>
 
-                {spTipi === 'surgulu_sineklik' ? (
-                  <>
-                    <h4 style={{ margin: '10px 0 6px 0', color: '#1E3A8A', fontSize: '13px' }}>2. Profil Rengi</h4>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                      {Object.keys(profilRenkleri).map(r => (
-                        <label key={r} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: spRenk === r ? 'bold' : 'normal' }}>
-                          <input type="radio" value={r} checked={spRenk === r} onChange={e => setSpRenk(e.target.value)} />
-                          {profilRenkleri[r].isim}
-                        </label>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ padding: '8px', backgroundColor: '#eff6ff', color: '#1E3A8A', borderRadius: '4px', fontSize: '11px', borderLeft: '3px solid #1E3A8A' }}>
-                    Not: Plise perdelerde kasa rengi fiyatı etkilemez. Fiyat m² üzerinden hesaplanır.
-                  </div>
-                )}
+                <div style={{ padding: '8px', backgroundColor: '#eff6ff', color: '#1E3A8A', borderRadius: '4px', fontSize: '11px', borderLeft: '3px solid #1E3A8A' }}>
+                  Not: Bu ürünlerde profil rengi fiyatı etkilemez.
+                </div>
               </div>
 
               <div className="mobil-tam-genislik" style={{ padding: '14px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', flex: '1', minWidth: '240px' }}>
@@ -1279,7 +1060,10 @@ export default function PvcCizimEkrani() {
                 <div style={{ marginBottom: '12px', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '12px', color: '#666' }}>Toplam Tutar ({spAdet} Adet):</div>
                   <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#1E3A8A', marginTop: '2px' }}>
-                    {Math.ceil(anlikSpTutar).toLocaleString('tr-TR')} ₺
+                    {(sineklikSonucu.teklifDetay?.toplam ?? 0).toLocaleString('tr-TR')} ₺
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                    Kıvırım (tepe) sayısı: <strong style={{ color: '#1E3A8A' }}>{sineklikSonucu.tepeSayisi ?? 0}</strong> adet
                   </div>
                 </div>
 
@@ -1485,9 +1269,8 @@ export default function PvcCizimEkrani() {
             </div>
             
             <div className="mobil-sutun" style={{ display: 'flex', gap: '4px', marginBottom: '12px', flexWrap: 'wrap' }}>
-              <button className="mobil-tam-genislik" onClick={() => setAktifRenkSekmesi('beyaz')} style={{ flex: '1', padding: '8px', backgroundColor: aktifRenkSekmesi === 'beyaz' ? '#1E3A8A' : '#f1f5f9', color: aktifRenkSekmesi === 'beyaz' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Beyaz Serisi</button>
-              <button className="mobil-tam-genislik" onClick={() => setAktifRenkSekmesi('antrasit')} style={{ flex: '1', padding: '8px', backgroundColor: aktifRenkSekmesi === 'antrasit' ? '#1E3A8A' : '#f1f5f9', color: aktifRenkSekmesi === 'antrasit' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Antrasit Serisi</button>
-              <button className="mobil-tam-genislik" onClick={() => setAktifRenkSekmesi('altin_mese')} style={{ flex: '1', padding: '8px', backgroundColor: aktifRenkSekmesi === 'altin_mese' ? '#1E3A8A' : '#f1f5f9', color: aktifRenkSekmesi === 'altin_mese' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Altın Meşe Serisi</button>
+              <button className="mobil-tam-genislik" onClick={() => setAktifRenkSekmesi('beyaz')} style={{ flex: '1', padding: '8px', backgroundColor: aktifRenkSekmesi === 'beyaz' ? '#1E3A8A' : '#f1f5f9', color: aktifRenkSekmesi === 'beyaz' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Beyaz Seri</button>
+              <button className="mobil-tam-genislik" onClick={() => setAktifRenkSekmesi('renkli')} style={{ flex: '1', padding: '8px', backgroundColor: aktifRenkSekmesi === 'renkli' ? '#1E3A8A' : '#f1f5f9', color: aktifRenkSekmesi === 'renkli' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Renkli Seri</button>
             </div>
 
             {fiyatYukleniyor ? (
@@ -1497,54 +1280,40 @@ export default function PvcCizimEkrani() {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', backgroundColor: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                 <div>
-                  <h4 style={{ margin: '0 0 8px 0', color: '#1E3A8A', borderBottom: '1px solid #eee', paddingBottom: '4px', fontSize: '13px' }}>UPVC Profilleri (m)</h4>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#1E3A8A', borderBottom: '1px solid #eee', paddingBottom: '4px', fontSize: '13px' }}>
+                    {aktifRenkSekmesi === 'beyaz' ? 'Beyaz Seri' : 'Renkli Seri'} Profilleri (m)
+                  </h4>
                   {[
                     { key: 'kasa', label: 'Kasa' },
                     { key: 'ortakayit', label: 'Ortakayıt' },
                     { key: 'pencereKanadi', label: 'Pencere Kanadı' },
                     { key: 'kapiKanadi', label: 'Kapı Kanadı' },
                     { key: 'surmeKasa', label: 'Sürme Kasa' },
-                    { key: 'surmeKanadi', label: 'Sürme Kanadı' }
+                    { key: 'surmeKanadi', label: 'Sürme Kanadı' },
+                    { key: 'lambiri', label: 'Lambiri' }
                   ].map(item => (
                     <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
                       {item.label}:
-                      <div><input type="number" value={fiyatTablo[aktifRenkSekmesi][item.key] || ''} onChange={(e) => handleFiyatDegisimi(aktifRenkSekmesi, item.key, e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
+                      <div><input type="number" value={fiyatTablo.seriler[aktifRenkSekmesi][item.key] ?? ''} onChange={(e) => handleFiyatDegisimi(['seriler', aktifRenkSekmesi, item.key], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
                     </label>
                   ))}
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 8px 0', color: '#1E3A8A', borderBottom: '1px solid #eee', paddingBottom: '4px', fontSize: '13px' }}>Alüminyum (m)</h4>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#1E3A8A', borderBottom: '1px solid #eee', paddingBottom: '4px', fontSize: '13px' }}>Cam Tipleri (m²)</h4>
                   {[
-                    { key: 'aluKasa', label: 'Kasa' },
-                    { key: 'aluOrtakayit', label: 'Ortakayıt' },
-                    { key: 'aluPencereKanadi', label: 'Pencere Kanadı' },
-                    { key: 'aluKapiKanadi', label: 'Kapı Kanadı' },
-                    { key: 'aluSurmeKasa', label: 'Sürme Kasa' },
-                    { key: 'aluSurmeKanadi', label: 'Sürme Kanadı' }
+                    { key: 'buzlu_tek', label: 'Buzlu Tek Cam' },
+                    { key: 'klasik', label: 'Klasik Isıcam' },
+                    { key: 'konfor', label: 'Konfor Cam' },
+                    { key: 'lamina', label: 'Lamina Cam' }
                   ].map(item => (
                     <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
                       {item.label}:
-                      <div><input type="number" value={fiyatTablo[aktifRenkSekmesi][item.key] || ''} onChange={(e) => handleFiyatDegisimi(aktifRenkSekmesi, item.key, e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
+                      <div><input type="number" value={fiyatTablo.camlar[item.key] ?? ''} onChange={(e) => handleFiyatDegisimi(['camlar', item.key], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
                     </label>
                   ))}
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 8px 0', color: '#1E3A8A', borderBottom: '1px solid #eee', paddingBottom: '4px', fontSize: '13px' }}>Cam ve Panel (m²)</h4>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
-                    Cam Fiyatı:
-                    <div><input type="number" value={fiyatTablo[aktifRenkSekmesi].cam || ''} onChange={(e) => handleFiyatDegisimi(aktifRenkSekmesi, 'cam', e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
-                  </label>
                   <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px', color: '#1E3A8A' }}>
-                    Cam İçi Çıta:
-                    <div><input type="number" value={fiyatTablo[aktifRenkSekmesi].camIci || ''} onChange={(e) => handleFiyatDegisimi(aktifRenkSekmesi, 'camIci', e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
-                  </label>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
-                    UPVC Lambiri:
-                    <div><input type="number" value={fiyatTablo[aktifRenkSekmesi].upvcLambiri || ''} onChange={(e) => handleFiyatDegisimi(aktifRenkSekmesi, 'upvcLambiri', e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
-                  </label>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
-                    Alü. Lambiri:
-                    <div><input type="number" value={fiyatTablo[aktifRenkSekmesi].aluLambiri || ''} onChange={(e) => handleFiyatDegisimi(aktifRenkSekmesi, 'aluLambiri', e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
+                    Cam İşçiliği:
+                    <div><input type="number" value={fiyatTablo.camIsciligi ?? ''} onChange={(e) => handleFiyatDegisimi(['camIsciligi'], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
                   </label>
                 </div>
                 <div>
@@ -1553,14 +1322,43 @@ export default function PvcCizimEkrani() {
                     { key: 'tekAcilim', label: 'Tek Açılım' },
                     { key: 'ciftAcilim', label: 'Çift Açılım' },
                     { key: 'vasistas', label: 'Vasistas' },
-                    { key: 'kapiAksesuar', label: 'Kapı Menteşe' },
-                    { key: 'surmeAksesuar', label: 'Sürme Araba' },
-                    { key: 'sineklik', label: 'Basit Sineklik' }
+                    { key: 'kapiAksesuar', label: 'Genel Aksesuar' },
+                    { key: 'surmeAksesuar', label: 'Sürme Aksesuarı' }
                   ].map(item => (
                     <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
                       {item.label}:
-                      <div><input type="number" value={fiyatTablo[aktifRenkSekmesi][item.key] || ''} onChange={(e) => handleFiyatDegisimi(aktifRenkSekmesi, item.key, e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
+                      <div><input type="number" value={fiyatTablo.aksesuarlar[item.key] ?? ''} onChange={(e) => handleFiyatDegisimi(['aksesuarlar', item.key], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
                     </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!fiyatYukleniyor && (
+              <div style={{ marginTop: '12px', backgroundColor: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid #eee', paddingBottom: '4px', marginBottom: '8px' }}>
+                  <h4 style={{ margin: 0, color: '#1E3A8A', fontSize: '13px' }}>Sineklik & Perde Fiyatları</h4>
+                  <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    Tepe Adımı (mm):
+                    <input type="number" value={fiyatTablo.tepeAdimiMM ?? ''} onChange={(e) => handleFiyatDegisimi(['tepeAdimiMM'], e.target.value)} style={{ width: '55px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/>
+                  </label>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                  {SINEKLIK_TIPLERI.map(sp => (
+                    <div key={sp.id}>
+                      <h5 style={{ margin: '0 0 8px 0', color: '#1E3A8A', fontSize: '12px' }}>{sp.ad}</h5>
+                      {[
+                        { key: 'cerceveM', label: 'Çerçeve (₺/m)' },
+                        { key: 'kumasM2', label: 'Kumaş/Tel (₺/m²)' },
+                        { key: 'tepeBasiBirim', label: 'Tepe Başı (₺/adet)' },
+                        { key: 'iscilik', label: 'İşçilik (₺)' }
+                      ].map(item => (
+                        <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
+                          {item.label}:
+                          <div><input type="number" value={fiyatTablo[sp.id]?.[item.key] ?? ''} onChange={(e) => handleFiyatDegisimi([sp.id, item.key], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
+                        </label>
+                      ))}
+                    </div>
                   ))}
                 </div>
               </div>

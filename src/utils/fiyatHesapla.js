@@ -267,33 +267,10 @@ export function hesapla(g, t) {
     }
   });
 
-  /* --- sineklik (açılan kanat başına) --- */
-  const acilirAdet = kanatlar.filter((k) => k !== 'sabit').length;
-  let sineklikMaliyeti = 0;
-  let sineklikDetay = null;
-  if (g.sineklikIste && acilirAdet > 0) {
-    const s = t?.sineklik || {};
-    // her açılan kanat için ayrı sineklik
-    const kanatOrtGen = bolmeGenislikleri.reduce((a, b) => a + b, 0) / bolmeSayisi;
-    const cevreM = (2 * (kanatOrtGen + icYuk)) / 1000;
-    const telM2Adet = (kanatOrtGen * icYuk) / 1e6;
-    const tepeAdet = Math.max(0, Number(s.tepeBasiAdet) || 0);
-
-    const birim =
-      cevreM * (Number(s.cerceveM) || 0) +
-      telM2Adet * (Number(s.telM2) || 0) +
-      tepeAdet * (Number(s.tepeBasiBirim) || 0) +
-      (Number(s.iscilik) || 0);
-
-    sineklikMaliyeti = birim * acilirAdet;
-    sineklikDetay = {
-      adet: acilirAdet,
-      cevreM: Number((cevreM * acilirAdet).toFixed(2)),
-      telM2: Number((telM2Adet * acilirAdet).toFixed(3)),
-      tepeBasiAdet: tepeAdet * acilirAdet,
-      birimTutar: Math.round(birim),
-    };
-  }
+  /* Sineklik artık ayrı bir üründür (hesaplaSineklik).
+     Doğramanın fiyatına kanat başına zorla eklenmez. */
+  const sineklikMaliyeti = 0;
+  const sineklikDetay = null;
 
   /* ---------- 6. TEKLİF ---------- */
   const birimHamMaliyet =
@@ -368,6 +345,128 @@ export function hesapla(g, t) {
 
     camTipi,
     kademe,
+  };
+}
+
+
+/* ============================================================
+   SİNEKLİK / PERDE HESABI
+
+   Üç ürün de aynı formülle fiyatlanır:
+     çevre profili (m) × ₺/m
+   + kumaş / tel (m²)   × ₺/m²
+   + tepe sayısı (adet) × ₺/adet
+   + işçilik (₺/adet ürün)
+
+   Tepe sayısı = boy ÷ tepe adımı (varsayılan 20 mm)
+   Usta bu sayıyı görüp kumaşı kaç kıvrım sayacağını bilir.
+   ============================================================ */
+export function hesaplaSineklik(g, t) {
+  const uyarilar = [];
+  const sayi = (v, y = 0) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : y;
+  };
+
+  const en = Math.max(0, sayi(g.genislik));
+  const boy = Math.max(0, sayi(g.yukseklik));
+  const adet = Math.max(1, Math.floor(sayi(g.adet, 1)));
+  const tip = g.tip || 'menteseliSineklik';
+
+  const gecerliTipler = ['menteseliSineklik', 'surguluSineklik', 'plisePerde'];
+  if (!gecerliTipler.includes(tip)) {
+    return {
+      gecerli: false,
+      uyarilar: ['Geçersiz ürün tipi.'],
+      tepeSayisi: 0, metraj: null, teklifDetay: { toplam: 0, birimFiyat: 0 },
+    };
+  }
+
+  if (en < 100 || boy < 100) uyarilar.push('Ölçüler çok küçük görünüyor.');
+  if (en > 4000 || boy > 4000) uyarilar.push('Ölçüler çok büyük görünüyor — kontrol edin.');
+
+  const tepeAdimi = Math.min(Math.max(sayi(t?.tepeAdimiMM, 20), 5), 100);
+  const tepeSayisi = boy > 0 ? Math.ceil(boy / tepeAdimi) : 0;
+
+  const cerceveM = (2 * (en + boy)) / 1000;
+  const kumasM2 = (en * boy) / 1e6;
+
+  const u = t?.[tip];
+  if (!u) {
+    return {
+      gecerli: false,
+      uyarilar: ['Bu ürün için fiyat tanımlı değil. Fiyat Ayarları bölümünü kontrol edin.'],
+      tepeSayisi, metraj: null, teklifDetay: { toplam: 0, birimFiyat: 0 },
+    };
+  }
+
+  const bf = (v, ad) => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) {
+      uyarilar.push(`"${ad}" fiyatı girilmemiş — 0 ₺ sayıldı.`);
+      return 0;
+    }
+    return n;
+  };
+
+  const fCerceve = bf(u.cerceveM, 'Çerçeve profili');
+  const fKumas = bf(u.kumasM2, 'Kumaş / tel');
+  const fTepe = bf(u.tepeBasiBirim, 'Tepe başı');
+  const fIscilik = bf(u.iscilik, 'İşçilik');
+
+  const cerceveTutar = cerceveM * fCerceve;
+  const kumasTutar = kumasM2 * fKumas;
+  const tepeTutar = tepeSayisi * fTepe;
+
+  const birimHam = cerceveTutar + kumasTutar + tepeTutar + fIscilik;
+  const ham = birimHam * adet;
+
+  const karTL = Math.max(0, sayi(g.karTL));
+  const karYuzde = Math.max(0, sayi(g.karYuzde));
+  const montajTL = Math.max(0, sayi(g.montajTL));
+
+  const karTutari = ham * (karYuzde / 100) + karTL * adet;
+  const montajTutari = montajTL * adet;
+  const kdvOncesi = ham + karTutari + montajTutari;
+  const kdvTutari = g.kdvEkle ? kdvOncesi * KDV_ORANI : 0;
+  const toplam = Math.ceil(kdvOncesi + kdvTutari);
+
+  return {
+    gecerli: true,
+    uyarilar,
+    tip,
+    tipAdi: u.ad || tip,
+
+    olculer: { genislik: en, yukseklik: boy, adet },
+
+    tepeAdimi,
+    tepeSayisi,
+    tepeSayisiToplam: tepeSayisi * adet,
+
+    metraj: {
+      cerceveM: Number(cerceveM.toFixed(3)),
+      kumasM2: Number(kumasM2.toFixed(3)),
+      cerceveMAdetli: Number((cerceveM * adet).toFixed(3)),
+      kumasM2Adetli: Number((kumasM2 * adet).toFixed(3)),
+    },
+
+    maliyet: {
+      cerceve: Math.round(cerceveTutar),
+      kumas: Math.round(kumasTutar),
+      tepe: Math.round(tepeTutar),
+      iscilik: Math.round(fIscilik),
+      birimHam: Math.round(birimHam),
+      ham: Math.round(ham),
+    },
+
+    teklifDetay: {
+      kar: Math.round(karTutari),
+      montaj: Math.round(montajTutari),
+      kdvOncesi: Math.round(kdvOncesi),
+      kdv: Math.round(kdvTutari),
+      toplam,
+      birimFiyat: Math.ceil(toplam / adet),
+    },
   };
 }
 
