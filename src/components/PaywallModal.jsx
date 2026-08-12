@@ -189,44 +189,6 @@ export default function PaywallModal({
         }
         .pw-havale-not strong{color:var(--ink);}
 
-        .pw-havale{
-          background:#f6f9fd;border:1px solid var(--line);border-radius:10px;
-          padding:14px 15px;margin-top:16px;
-        }
-        .pw-havale-bas{
-          font-size:12.5px;font-weight:700;margin-bottom:10px;
-          display:flex;align-items:center;gap:7px;
-        }
-        .pw-iban-sat{
-          display:flex;align-items:center;gap:10px;
-          background:#fff;border:1px solid var(--line2);border-radius:8px;
-          padding:10px 12px;margin-bottom:8px;
-        }
-        .pw-iban-no{
-          flex:1;min-width:0;font-family:'JetBrains Mono',monospace;
-          font-size:13.2px;font-weight:600;letter-spacing:.02em;
-          overflow-x:auto;white-space:nowrap;
-        }
-        .pw-kopyala{
-          flex-shrink:0;padding:6px 11px;border-radius:7px;
-          background:var(--blue-s);border:1px solid transparent;color:var(--blue);
-          font-size:12px;font-weight:650;font-family:inherit;cursor:pointer;
-          transition:background .15s;
-        }
-        .pw-kopyala:hover{background:#dbe8fb;}
-        .pw-kopyala.ok{background:#e9f7ef;color:var(--ok);}
-        .pw-havale-satir{
-          display:flex;justify-content:space-between;gap:12px;
-          font-size:12.8px;padding:3px 0;
-        }
-        .pw-havale-satir span:first-child{color:var(--faint);}
-        .pw-havale-satir span:last-child{color:var(--ink2);font-weight:600;text-align:right;}
-        .pw-havale-not{
-          font-size:12.2px;color:var(--muted);line-height:1.55;
-          margin-top:10px;padding-top:10px;border-top:1px solid var(--line);
-        }
-        .pw-havale-not strong{color:var(--ink);}
-
         .pw-not{
           font-size:12.3px;color:var(--faint);line-height:1.55;
           text-align:center;margin-top:16px;padding-top:14px;
