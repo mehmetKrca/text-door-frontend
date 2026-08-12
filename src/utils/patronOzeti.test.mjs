@@ -50,6 +50,17 @@ console.log('\nTEST 2 — aralık filtresi');
   dogru('tüm zamanlar hepsini alır', tarihAralikta('10.02.2019', 'tum', BUGUN) === true);
   dogru('tarihsiz kayıt tüm zamanlara girer', tarihAralikta(null, 'tum', BUGUN) === true);
   dogru('tarihsiz kayıt bu aya girmez', tarihAralikta(null, 'ay', BUGUN) === false);
+
+  // özel aralık
+  dogru('özel aralık içinde', tarihAralikta('10.08.2026', 'ozel', BUGUN, '01.08.2026', '20.08.2026') === true);
+  dogru('özel aralık başlangıç sınırı dahil', tarihAralikta('01.08.2026', 'ozel', BUGUN, '01.08.2026', '20.08.2026') === true);
+  dogru('özel aralık bitiş sınırı dahil', tarihAralikta('20.08.2026', 'ozel', BUGUN, '01.08.2026', '20.08.2026') === true);
+  dogru('özel aralık dışında (önce)', tarihAralikta('31.07.2026', 'ozel', BUGUN, '01.08.2026', '20.08.2026') === false);
+  dogru('özel aralık dışında (sonra)', tarihAralikta('21.08.2026', 'ozel', BUGUN, '01.08.2026', '20.08.2026') === false);
+  dogru('özel aralık ISO tarihlerle çalışır', tarihAralikta('2026-08-10', 'ozel', BUGUN, '2026-08-01', '2026-08-20') === true);
+  dogru('başlangıç eksikse eşleşmez', tarihAralikta('10.08.2026', 'ozel', BUGUN, null, '20.08.2026') === false);
+  dogru('bitiş eksikse eşleşmez', tarihAralikta('10.08.2026', 'ozel', BUGUN, '01.08.2026', null) === false);
+  dogru('ikisi de eksikse eşleşmez', tarihAralikta('10.08.2026', 'ozel', BUGUN) === false);
 }
 
 console.log('\nTEST 3 — eski kalem dönüştürme');
@@ -170,6 +181,39 @@ console.log('\nTEST 5 — bu yıl (iki proje birleşir)');
   esit('pencere adet 3', o.urunTipleri.pencere.adet, 3);
   esit('pencere ciro 16.000 ₺', o.urunTipleri.pencere.ciro, 16000);
   esit('atlanan yok', o.atlanan, 0);
+}
+
+console.log('\nTEST 5b — özel tarih aralığı');
+{
+  // yalnızca Mart projesini kapsayan aralık
+  const sadeceMart = patronOzetiHesapla(ARSIV, T, {
+    aralik: 'ozel', baslangic: '01.03.2026', bitis: '31.03.2026', bugun: BUGUN,
+  });
+  esit('sadece mart projesi', sadeceMart.projeSayisi, 1);
+  esit('mart ciro 7.000 ₺', sadeceMart.ciro, 7000);
+
+  // her iki projeyi de kapsayan geniş aralık
+  const genisAralik = patronOzetiHesapla(ARSIV, T, {
+    aralik: 'ozel', baslangic: '01.01.2026', bitis: '31.12.2026', bugun: BUGUN,
+  });
+  esit('geniş aralıkta 2 proje', genisAralik.projeSayisi, 2);
+  esit('geniş aralık ciro 20.000 ₺', genisAralik.ciro, 20000);
+
+  // hiçbir projeyi kapsamayan aralık
+  const bosAralik = patronOzetiHesapla(ARSIV, T, {
+    aralik: 'ozel', baslangic: '01.01.2020', bitis: '31.12.2020', bugun: BUGUN,
+  });
+  esit('boş aralıkta 0 proje', bosAralik.projeSayisi, 0);
+  esit('boş aralıkta ciro 0', bosAralik.ciro, 0);
+
+  // başlangıç/bitiş verilmezse hiçbir kayıt eşleşmez, ama çökmez
+  const eksikAralik = patronOzetiHesapla(ARSIV, T, { aralik: 'ozel', bugun: BUGUN });
+  esit('eksik aralıkta 0 proje', eksikAralik.projeSayisi, 0);
+  dogru('eksik aralık çökmez', Number.isFinite(eksikAralik.ciro));
+
+  // tanınmayan/eksik aralik değeri 'tum'a düşer (mevcut davranış korunuyor)
+  const bilinmeyen = patronOzetiHesapla(ARSIV, T, { aralik: 'boyle_bir_sey_yok', bugun: BUGUN });
+  esit('bilinmeyen aralık tüm zamanlara düşer', bilinmeyen.projeSayisi, 2);
 }
 
 console.log('\nTEST 6 — eski şemalı arşiv de raporlanır');

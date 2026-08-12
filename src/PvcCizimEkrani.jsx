@@ -219,6 +219,8 @@ export default function PvcCizimEkrani() {
   const [fiyatYukleniyor, setFiyatYukleniyor] = useState(true);
 
   const [raporAralik, setRaporAralik] = useState('ay');
+  const [raporBaslangic, setRaporBaslangic] = useState('');
+  const [raporBitis, setRaporBitis] = useState('');
 
   useEffect(() => {
     const fiyatlariBuluttanGetir = async () => {
@@ -516,6 +518,13 @@ export default function PvcCizimEkrani() {
     if(window.confirm('Bu arşivi silmek istediğinize emin misiniz?')) {
       const guncel = musteriArsivi.filter(item => String(item.id) !== String(id));
       setMusteriArsivi(guncel); localStorage.setItem('bayiMusteriArsivi', JSON.stringify(guncel));
+
+      const token = getAuthToken();
+      if (token) {
+        try {
+          await API.delete(`users/proje-sil/${id}/`);
+        } catch (error) { console.error("Proje veritabanından silinirken sorun oluştu:", error); }
+      }
     }
   };
 
@@ -592,8 +601,8 @@ export default function PvcCizimEkrani() {
   const sablonBtnStyle = { padding: '5px 10px', backgroundColor: '#f1f5f9', color: '#1E3A8A', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', flexShrink: 0, whiteSpace: 'nowrap' };
 
   const patronOzeti = useMemo(
-    () => patronOzetiHesapla(musteriArsivi, fiyatTablo, { aralik: raporAralik }),
-    [musteriArsivi, fiyatTablo, raporAralik]
+    () => patronOzetiHesapla(musteriArsivi, fiyatTablo, { aralik: raporAralik, baslangic: raporBaslangic, bitis: raporBitis }),
+    [musteriArsivi, fiyatTablo, raporAralik, raporBaslangic, raporBitis]
   );
 
   return (
@@ -1046,7 +1055,15 @@ export default function PvcCizimEkrani() {
 
         {/* 6. SEKME: PATRON EKRANI */}
         {aktifSekme === 'patron' && patronMu && (
-          <PatronOzeti ozet={patronOzeti} aralik={raporAralik} aralikDegis={setRaporAralik} />
+          <PatronOzeti
+            ozet={patronOzeti}
+            aralik={raporAralik}
+            aralikDegis={setRaporAralik}
+            baslangic={raporBaslangic}
+            bitis={raporBitis}
+            baslangicDegis={setRaporBaslangic}
+            bitisDegis={setRaporBitis}
+          />
         )}
 
       </div>

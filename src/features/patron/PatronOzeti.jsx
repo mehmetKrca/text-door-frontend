@@ -4,10 +4,10 @@ import { CAM_TIPLERI, SINEKLIK_TIPLERI } from '../../utils/fiyatTablosu.js';
 
 const monoStil = { fontFamily: "'JetBrains Mono', monospace", fontVariantNumeric: 'tabular-nums' };
 
-export default function PatronOzeti({ ozet, aralik, aralikDegis }) {
+export default function PatronOzeti({ ozet, aralik, aralikDegis, baslangic, bitis, baslangicDegis, bitisDegis }) {
   return (
     <div style={{ padding: '14px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', minHeight: '380px', width: '100%', boxSizing: 'border-box' }}>
-      <div className="mobil-sutun" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #1E3A8A', paddingBottom: '12px', marginBottom: '16px' }}>
+      <div className="mobil-sutun" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #1E3A8A', paddingBottom: '12px', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h3 style={{ margin: '0 0 4px 0', color: '#1E3A8A', fontSize: '20px' }}>📊 Patron & Fabrika Analiz Özeti</h3>
           <p style={{ margin: 0, color: '#555', fontSize: '12px' }}>Seçtiğiniz döneme göre ciro, tüketim ve satış kırılımını görün.</p>
@@ -20,6 +20,22 @@ export default function PatronOzeti({ ozet, aralik, aralikDegis }) {
           ))}
         </div>
       </div>
+
+      {aralik === 'ozel' && (
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px', marginBottom: '16px' }}>
+          <label style={{ fontSize: '12px', color: '#1E3A8A', fontWeight: 'bold' }}>
+            Başlangıç:
+            <input type="date" value={baslangic || ''} onChange={(e) => baslangicDegis(e.target.value)} style={{ display: 'block', marginTop: '4px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '12px' }} />
+          </label>
+          <label style={{ fontSize: '12px', color: '#1E3A8A', fontWeight: 'bold' }}>
+            Bitiş:
+            <input type="date" value={bitis || ''} onChange={(e) => bitisDegis(e.target.value)} style={{ display: 'block', marginTop: '4px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '12px' }} />
+          </label>
+          {!baslangic || !bitis ? (
+            <span style={{ fontSize: '11px', color: '#c62828', paddingBottom: '8px' }}>İki tarihi de seçin.</span>
+          ) : null}
+        </div>
+      )}
 
       {/* 4 ÖZET KART */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>

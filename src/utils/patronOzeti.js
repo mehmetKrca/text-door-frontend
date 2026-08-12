@@ -66,14 +66,22 @@ export function tarihiCoz(deger) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** aralik: 'ay' | 'yil' | 'tum' */
-export function tarihAralikta(tarih, aralik, bugun = new Date()) {
+/** aralik: 'ay' | 'yil' | 'tum' | 'ozel' */
+export function tarihAralikta(tarih, aralik, bugun = new Date(), baslangic, bitis) {
   if (aralik === 'tum') return true;
   const d = tarihiCoz(tarih);
   if (!d) return false;   // tarihi okunamayan kayıt dönemsel rapora girmez
   if (aralik === 'yil') return d.getFullYear() === bugun.getFullYear();
   if (aralik === 'ay') {
     return d.getFullYear() === bugun.getFullYear() && d.getMonth() === bugun.getMonth();
+  }
+  if (aralik === 'ozel') {
+    const b = tarihiCoz(baslangic);
+    const s = tarihiCoz(bitis);
+    if (!b || !s) return false;   // aralık tamamlanmadan hiçbir kayıt eşleşmez
+    const gunBaslangic = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+    const gunBitis = new Date(s.getFullYear(), s.getMonth(), s.getDate(), 23, 59, 59, 999);
+    return d.getTime() >= gunBaslangic.getTime() && d.getTime() <= gunBitis.getTime();
   }
   return true;
 }
@@ -128,8 +136,9 @@ export function kalemiNormalize(kalem) {
 /* ---------- ana toplama ---------- */
 
 export function patronOzetiHesapla(arsiv, fiyatTablo, secenekler = {}) {
-  const aralik = ['ay', 'yil', 'tum'].includes(secenekler.aralik) ? secenekler.aralik : 'tum';
+  const aralik = ['ay', 'yil', 'tum', 'ozel'].includes(secenekler.aralik) ? secenekler.aralik : 'tum';
   const bugun = secenekler.bugun instanceof Date ? secenekler.bugun : new Date();
+  const { baslangic, bitis } = secenekler;
 
   const bosSeri = () => ({ metre: 0, kalemAdet: 0 });
   const bosCam = () => ({ m2: 0, kalemAdet: 0 });
@@ -168,7 +177,7 @@ export function patronOzetiHesapla(arsiv, fiyatTablo, secenekler = {}) {
 
   liste.forEach((proje) => {
     if (!proje) return;
-    if (!tarihAralikta(proje.teklifTarihi, aralik, bugun)) return;
+    if (!tarihAralikta(proje.teklifTarihi, aralik, bugun, baslangic, bitis)) return;
 
     ozet.projeSayisi += 1;
 
@@ -306,6 +315,7 @@ export const ARALIK_ADLARI = {
   ay: 'Bu Ay',
   yil: 'Bu Yıl',
   tum: 'Tüm Zamanlar',
+  ozel: '📅 Tarih Seç',
 };
 
 export const URUN_ADLARI = {
