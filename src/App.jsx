@@ -8,6 +8,7 @@ import { useAuth } from './context/AuthContext.jsx'
 // --- YENİ EKLENEN YASAL SÖZLEŞME SAYFALARI ---
 import GizlilikSozlesmesi from './pages/GizlilikSozlesmesi'
 import KullaniciSozlesmesi from './pages/KullaniciSozlesmesi'
+import HesapSilmeTalebi from './pages/HesapSilmeTalebi'
 
 // --- GÜVENLİK DUVARI (KORUMALI ROTA) BİLEŞENİ ---
 const KorumaliRota = ({ children }) => {
@@ -34,6 +35,7 @@ function App() {
       {/* Yasal Sözleşme Sayfaları */}
       <Route path="/gizlilik-sozlesmesi" element={<GizlilikSozlesmesi />} />
       <Route path="/kullanici-sozlesmesi" element={<KullaniciSozlesmesi />} />
+      <Route path="/hesap-silme" element={<HesapSilmeTalebi />} />
       
       {/* --- KORUMALI ROTALAR (Giriş Zorunlu) --- */}
       <Route 

@@ -1207,7 +1207,7 @@ export default function Login() {
           <div className="ew-foot-links">
             <a href="/kullanici-sozlesmesi">Kullanıcı Sözleşmesi</a>
             <a href="/gizlilik-sozlesmesi">Gizlilik Politikası</a>
-            <a href="/gizlilik-sozlesmesi#hesap-silme">Hesap Silme Talebi</a>
+            <a href="/hesap-silme">Hesap Silme Talebi</a>
             <button className="ew-nav-link" style={{ color: '#cbd5e4', fontSize: '13.5px' }} onClick={() => kaydir('fiyatlar')}>
               Fiyatlar
             </button>
