@@ -35,7 +35,7 @@ const SP_URUN_TIPLERI_TUMU = ['menteseliSineklik', 'surguluSineklik', 'plisePerd
 export default function PvcCizimEkrani() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { cikis, patronMu } = useAuth();
+  const { cikis, patronMu, kullanici } = useAuth();
 
   const [aktifSekme, setAktifSekme] = useState(() => {
     return localStorage.getItem('eWindoore_aktif_sekme') || 'cizim';
@@ -164,7 +164,11 @@ export default function PvcCizimEkrani() {
     }
   }, [aktifSekme]);
 
-  const [firmaAdi, setFirmaAdi] = useState('KOÇAK YAPI / PVC ve Doğrama Sistemleri');
+  const [firmaAdi, setFirmaAdi] = useState('');
+
+  useEffect(() => {
+    if (kullanici?.firma_adi) setFirmaAdi(kullanici.firma_adi);
+  }, [kullanici]);
   const [musteriTel, setMusteriTel] = useState('');
   const [teklifTarihi, setTeklifTarihi] = useState(new Date().toLocaleDateString('tr-TR'));
 

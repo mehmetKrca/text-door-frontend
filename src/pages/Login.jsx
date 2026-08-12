@@ -788,7 +788,7 @@ export default function Login() {
                     <input
                       className="ew-in" type="text" value={firmaAdi}
                       onChange={(e) => setFirmaAdi(e.target.value)}
-                      placeholder="Örn: Koçak Yapı" autoComplete="organization"
+                      placeholder="Firma / Atölye adınız" autoComplete="organization"
                     />
                   </div>
                   <div className="ew-f ew-row2">

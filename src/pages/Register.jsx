@@ -97,7 +97,7 @@ function Register() {
                 type="text"
                 name="firma_adi"
                 className="form-control form-control-lg bg-light border-0"
-                placeholder="Koçak Yapı"
+                placeholder="Firma / Atölye adınız"
                 value={formData.firma_adi}
                 onChange={handleChange}
                 required

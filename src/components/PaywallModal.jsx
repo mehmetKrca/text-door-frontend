@@ -15,7 +15,7 @@ import React from 'react';
  * iletişime geçiyor, havale sonrası abonelik admin panelinden açılıyor.
  */
 
-const WHATSAPP_NUMARA = '905010949382';   // firma iletişim numarası
+const WHATSAPP_NUMARA = '905357274210';   // firma iletişim numarası
 
 export default function PaywallModal({
   acik,
