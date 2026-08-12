@@ -9,6 +9,8 @@ import DogramaCizim from './components/DogramaCizim.jsx';
 import TeklifYazdir from './components/TeklifYazdir.jsx';
 import PatronOzeti from './features/patron/PatronOzeti.jsx';
 import FiyatAyarlari from './features/fiyatlar/FiyatAyarlari.jsx';
+import CrmArsiv from './features/arsiv/CrmArsiv.jsx';
+import SiparisSepeti from './features/sepet/SiparisSepeti.jsx';
 
 // 🎯 TOKEN ALMA YARDIMCI FONKSİYONU
 const getAuthToken = () => {
@@ -519,6 +521,10 @@ export default function PvcCizimEkrani() {
 
   const handleYeniProje = () => { setProjeAdi(''); setMusteriTel(''); setMusteriAdres(''); setSiparisNotu(''); setSepet([]); setKalemAdi(''); setDuzenlenenKalemId(null); };
 
+  const PROJE_ALAN_SETTERLARI = { ad: setProjeAdi, tel: setMusteriTel, tarih: setTeklifTarihi, adres: setMusteriAdres, not: setSiparisNotu };
+  const handleProjeAlanDegistir = (alan, deger) => PROJE_ALAN_SETTERLARI[alan]?.(deger);
+  const handleKalemSil = (id) => setSepet(prev => prev.filter(k => k.id !== id));
+
   const profilRenkleri = {
     beyaz: { isim: 'Klasik Beyaz', fill: '#fcfcfc', border: '#b0bec5', shadow: '#cfd8dc', highlight: '#ffffff' },
     antrasit: { isim: 'Antrasit Gri', fill: '#37474f', border: '#263238', shadow: '#1e272c', highlight: '#546e7a' },
@@ -964,147 +970,27 @@ export default function PvcCizimEkrani() {
 
         {/* 3. SEKME: SİPARİŞ SEPETİ VE PROJE YÖNETİMİ */}
         {aktifSekme === 'sepet' && (
-          <div style={{ padding: '14px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' }}>
-            <div className="mobil-sutun" style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <div className="mobil-tam-genislik" style={{ flex: '1.5', minWidth: '260px' }}>
-                <strong style={{ color: '#1E3A8A', display: 'block', marginBottom: '8px', fontSize: '14px' }}>📝 Proje ve Müşteri Bilgileri:</strong>
-                <div className="mobil-sutun" style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                  <input type="text" placeholder="Müşteri / Proje Adı (Zorunlu)" value={projeAdi} onChange={(e) => setProjeAdi(e.target.value)} style={{ flex: '2', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px' }}/>
-                  <input type="text" placeholder="Telefon (Opsiyonel)" value={musteriTel} onChange={(e) => setMusteriTel(e.target.value)} style={{ flex: '1', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px' }}/>
-                  <input type="text" value={teklifTarihi} onChange={(e) => setTeklifTarihi(e.target.value)} style={{ width: '100px', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px' }}/>
-                </div>
-                
-                <div style={{ marginBottom: '8px' }}>
-                  <input type="text" placeholder="Müşteri Adresi (Fatura için opsiyonel)" value={musteriAdres} onChange={(e) => setMusteriAdres(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px' }}/>
-                </div>
-                
-                <div style={{ marginBottom: '12px' }}>
-                  <textarea placeholder="Siparişe / Atölyeye özel notlar ekleyin (Müşteri PDF'te görebilir)" value={siparisNotu} onChange={(e) => setSiparisNotu(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px', minHeight: '50px' }}></textarea>
-                </div>
-
-                <div className="mobil-sutun" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button className="mobil-tam-genislik" onClick={handleProjeKaydet} style={{ padding: '8px 12px', backgroundColor: '#1E3A8A', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Arşive Kaydet</button>
-                  <button className="mobil-tam-genislik" onClick={handleWhatsAppGonder} style={{ padding: '8px 12px', backgroundColor: '#25D366', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>WhatsApp 💬</button>
-                  <button className="mobil-tam-genislik" onClick={handlePDFIndir} style={{ padding: '8px 12px', backgroundColor: '#37474f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>PDF Yazdır 🖨️</button>
-                  <button className="mobil-tam-genislik" onClick={handleYeniProje} style={{ padding: '8px 12px', backgroundColor: '#78909c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Yeni Proje</button>
-                </div>
-              </div>
-            </div>
-
-            <h3 style={{ margin: '0 0 12px 0', color: '#1E3A8A', borderBottom: '2px solid #ddd', paddingBottom: '8px', fontSize: '16px' }}>
-              Sipariş Listesi ve Fiyatlar
-            </h3>
-            
-            {sepet.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px' }}><p style={{ color: '#777', fontStyle: 'italic', fontSize: '13px' }}>Sepetinizde ürün bulunmamaktadır.</p></div>
-            ) : (
-              <div>
-                <div className="tablo-kapsayici">
-                  <table style={{ width: '100%', fontSize: '12px', textAlign: 'left', borderCollapse: 'collapse', backgroundColor: 'white', border: '1px solid #e2e8f0', minWidth: '550px' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A' }}>
-                        <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Kalem Adı</th>
-                        <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Tip</th>
-                        <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Ölçü</th>
-                        <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Detay</th>
-                        {patronMu && (
-                          <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>Tutar</th>
-                        )}
-                        <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'center' }}>İşlem</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sepet.map((kalem) => (
-                        <tr key={kalem.id} onClick={() => handleKalemiDuzenle(kalem)} style={{ cursor: 'pointer', backgroundColor: duzenlenenKalemId === kalem.id ? '#f1f5f9' : 'transparent' }}>
-                          <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold', color: '#1E3A8A' }}>{kalem.isim}</td>
-                          <td style={{ padding: '8px', borderBottom: '1px solid #eee', textTransform: 'capitalize' }}>{kalem.urunTipi.replace('_', ' ')}</td>
-                          <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{kalem.genislik}x{kalem.yukseklik} {kalem.adet > 1 && `(x${kalem.adet})`}</td>
-                          <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{kalem.renkIsmi || kalem.renk}</td>
-                          {patronMu && (
-                            <td style={{ padding: '8px', borderBottom: '1px solid #eee', textAlign: 'right', fontWeight: 'bold', color: '#1E3A8A' }}>
-                              {Math.ceil(Number(kalem.fiyat) || 0).toLocaleString('tr-TR')} ₺
-                            </td>
-                          )}
-                          <td style={{ padding: '8px', borderBottom: '1px solid #eee', textAlign: 'center' }}>
-                            <button onClick={(e) => { e.stopPropagation(); setSepet(prev => prev.filter(k => k.id !== kalem.id)); }} style={{ padding: '4px 8px', backgroundColor: '#c62828', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '11px' }}>Sil</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {patronMu && (
-                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '2px solid #cfd8dc', textAlign: 'right' }}>
-                    <span style={{ fontSize: '14px', color: '#546e7a', marginRight: '10px' }}>Proje Genel Toplamı:</span>
-                    <h2 style={{ margin: '0', color: '#1E3A8A', fontSize: '24px', display: 'inline-block' }}>
-                      {Math.ceil(sepetGenelToplam).toLocaleString('tr-TR')} ₺
-                    </h2>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <SiparisSepeti
+            proje={{ ad: projeAdi, tel: musteriTel, tarih: teklifTarihi, adres: musteriAdres, not: siparisNotu }}
+            projeAlanDegistir={handleProjeAlanDegistir}
+            sepet={{ liste: sepet, genelToplam: sepetGenelToplam, duzenlenenId: duzenlenenKalemId }}
+            sepetAksiyonlari={{ sil: handleKalemSil, duzenle: handleKalemiDuzenle }}
+            patronMu={patronMu}
+            aksiyonlar={{ kaydet: handleProjeKaydet, whatsapp: handleWhatsAppGonder, pdfYazdir: handlePDFIndir, yeniProje: handleYeniProje }}
+          />
         )}
 
         {/* 4. SEKME: CRM VE SÜREÇ TAKİP EKRANI */}
         {aktifSekme === 'arsiv' && (
-          <div style={{ padding: '14px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', width: '100%', boxSizing: 'border-box' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #ddd', paddingBottom: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              <div>
-                <h3 style={{ margin: '0 0 4px 0', color: '#1E3A8A', fontSize: '18px' }}>📑 Gelişmiş CRM ve Sipariş Takip Paneli</h3>
-                <span style={{ fontSize: '11px', color: '#666' }}>Müşterilerinizin durumunu ve süreçlerini anlık yönetin.</span>
-              </div>
-              <span style={{ fontSize: '11px', color: '#1E3A8A', backgroundColor: '#eff6ff', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold', border: '1px solid #93c5fd' }}>
-                Toplam {musteriArsivi.length} Kayıt
-              </span>
-            </div>
-            
-            {arsivYukleniyor ? (
-              <div style={{ textAlign: 'center', padding: '24px', color: '#1E3A8A', fontWeight: 'bold' }}>Bulut arşiviniz yükleniyor... ☁️</div>
-            ) : musteriArsivi.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px', backgroundColor: '#fff', borderRadius: '4px', border: '1px solid #ddd' }}><p style={{ color: '#777', fontStyle: 'italic', fontSize: '13px' }}>Henüz kaydedilmiş CRM kaydı yok.</p></div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
-                {musteriArsivi.map(arsiv => {
-                  const drm = arsiv.durum || 'teklif';
-                  const drmAyar = durumRenkleri[drm] || durumRenkleri.teklif;
-                  return (
-                    <div key={arsiv.id} style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px', border: `2px solid ${drmAyar.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column' }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <label style={{ fontSize: '10px', fontWeight: 'bold', color: '#777', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Sipariş Durumu:</label>
-                        <select value={drm} onChange={(e) => handleDurumGuncelle(arsiv.id, e.target.value)} style={{ padding: '6px 8px', borderRadius: '4px', border: `1px solid ${drmAyar.color}`, backgroundColor: drmAyar.bg, color: drmAyar.color, fontWeight: 'bold', fontSize: '12px', width: '100%', cursor: 'pointer', outline: 'none' }}>
-                          {Object.keys(durumRenkleri).map(k => (
-                            <option key={k} value={k}>{durumRenkleri[k].icon} {durumRenkleri[k].label}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <h4 style={{ margin: '0 0 6px 0', color: '#1E3A8A', fontSize: '15px', borderBottom: '1px solid #eee', paddingBottom: '4px' }}>
-                        👤 {arsiv.projeAdi || 'İsimsiz Müşteri'}
-                      </h4>
-
-                      <div style={{ fontSize: '12px', color: '#555', display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '10px' }}>
-                        <div><strong>📅 Tarih:</strong> {arsiv.teklifTarihi}</div>
-                        <div><strong>📞 Tel:</strong> {arsiv.musteriTel || 'Belirtilmedi'}</div>
-                        {arsiv.musteriAdres && <div><strong>📍 Adres:</strong> {arsiv.musteriAdres}</div>}
-                      </div>
-                      
-                      <div style={{ marginTop: 'auto', paddingTop: '8px', borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                        <span style={{ fontSize: '11px', color: '#777' }}>Proje Tutarı:</span>
-                        <strong style={{ fontSize: '15px', color: '#1E3A8A' }}>{Math.ceil(Number(arsiv.toplamFiyat) || 0).toLocaleString('tr-TR')} ₺</strong>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button onClick={() => handleArsivdenYukle(arsiv)} style={{ flex: '1', padding: '6px 10px', backgroundColor: '#1E3A8A', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}>Sepete Yükle</button>
-                        <button onClick={() => handleArsivdenSil(arsiv.id)} style={{ padding: '6px 10px', backgroundColor: '#c62828', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Sil</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <CrmArsiv
+            arsiv={musteriArsivi}
+            yukleniyor={arsivYukleniyor}
+            durumGuncelle={handleDurumGuncelle}
+            yukle={handleArsivdenYukle}
+            sil={handleArsivdenSil}
+            durumRenkleri={durumRenkleri}
+            patronMu={patronMu}
+          />
         )}
 
         {/* 5. SEKME: FİYAT VE PROFİL AYARLARI */}
