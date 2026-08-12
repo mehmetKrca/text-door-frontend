@@ -15,7 +15,13 @@ import React from 'react';
  * iletişime geçiyor, havale sonrası abonelik admin panelinden açılıyor.
  */
 
-const WHATSAPP_NUMARA = '905357274210';   // firma iletişim numarası
+/* İletişim ve ödeme bilgileri .env dosyasından okunur.
+   Şirket hesabına geçildiğinde yalnızca .env güncellenir, koda dokunulmaz.
+   IBAN tanımlı değilse havale bölümü hiç gösterilmez. */
+const WHATSAPP_NUMARA = import.meta.env.VITE_WHATSAPP || '905357274210';
+const IBAN = import.meta.env.VITE_IBAN || '';
+const IBAN_ALICI = import.meta.env.VITE_IBAN_ALICI || '';
+const BANKA = import.meta.env.VITE_BANKA || '';
 
 export default function PaywallModal({
   acik,
@@ -24,7 +30,19 @@ export default function PaywallModal({
   kalanGun = 0,
   firmaAdi = '',
 }) {
+  const [kopyalandi, setKopyalandi] = React.useState(false);
+
   if (!acik) return null;
+
+  const ibanKopyala = async () => {
+    try {
+      await navigator.clipboard.writeText(IBAN.replace(/\s/g, ''));
+      setKopyalandi(true);
+      setTimeout(() => setKopyalandi(false), 2500);
+    } catch {
+      /* pano izni yoksa sessizce geç, kullanıcı elle seçebilir */
+    }
+  };
 
   const metinler = {
     deneme: {
@@ -133,6 +151,82 @@ export default function PaywallModal({
         }
         .pw-btn-o:hover{border-color:var(--blue);background:#f8fbff;}
 
+        .pw-havale{
+          background:#f6f9fd;border:1px solid var(--line);border-radius:10px;
+          padding:14px 15px;margin-top:16px;
+        }
+        .pw-havale-bas{
+          font-size:12.5px;font-weight:700;margin-bottom:10px;
+          display:flex;align-items:center;gap:7px;
+        }
+        .pw-iban-sat{
+          display:flex;align-items:center;gap:10px;
+          background:#fff;border:1px solid var(--line2);border-radius:8px;
+          padding:10px 12px;margin-bottom:8px;
+        }
+        .pw-iban-no{
+          flex:1;min-width:0;font-family:'JetBrains Mono',monospace;
+          font-size:13.2px;font-weight:600;letter-spacing:.02em;
+          overflow-x:auto;white-space:nowrap;
+        }
+        .pw-kopyala{
+          flex-shrink:0;padding:6px 11px;border-radius:7px;
+          background:var(--blue-s);border:1px solid transparent;color:var(--blue);
+          font-size:12px;font-weight:650;font-family:inherit;cursor:pointer;
+          transition:background .15s;
+        }
+        .pw-kopyala:hover{background:#dbe8fb;}
+        .pw-kopyala.ok{background:#e9f7ef;color:var(--ok);}
+        .pw-havale-satir{
+          display:flex;justify-content:space-between;gap:12px;
+          font-size:12.8px;padding:3px 0;
+        }
+        .pw-havale-satir span:first-child{color:var(--faint);}
+        .pw-havale-satir span:last-child{color:var(--ink2);font-weight:600;text-align:right;}
+        .pw-havale-not{
+          font-size:12.2px;color:var(--muted);line-height:1.55;
+          margin-top:10px;padding-top:10px;border-top:1px solid var(--line);
+        }
+        .pw-havale-not strong{color:var(--ink);}
+
+        .pw-havale{
+          background:#f6f9fd;border:1px solid var(--line);border-radius:10px;
+          padding:14px 15px;margin-top:16px;
+        }
+        .pw-havale-bas{
+          font-size:12.5px;font-weight:700;margin-bottom:10px;
+          display:flex;align-items:center;gap:7px;
+        }
+        .pw-iban-sat{
+          display:flex;align-items:center;gap:10px;
+          background:#fff;border:1px solid var(--line2);border-radius:8px;
+          padding:10px 12px;margin-bottom:8px;
+        }
+        .pw-iban-no{
+          flex:1;min-width:0;font-family:'JetBrains Mono',monospace;
+          font-size:13.2px;font-weight:600;letter-spacing:.02em;
+          overflow-x:auto;white-space:nowrap;
+        }
+        .pw-kopyala{
+          flex-shrink:0;padding:6px 11px;border-radius:7px;
+          background:var(--blue-s);border:1px solid transparent;color:var(--blue);
+          font-size:12px;font-weight:650;font-family:inherit;cursor:pointer;
+          transition:background .15s;
+        }
+        .pw-kopyala:hover{background:#dbe8fb;}
+        .pw-kopyala.ok{background:#e9f7ef;color:var(--ok);}
+        .pw-havale-satir{
+          display:flex;justify-content:space-between;gap:12px;
+          font-size:12.8px;padding:3px 0;
+        }
+        .pw-havale-satir span:first-child{color:var(--faint);}
+        .pw-havale-satir span:last-child{color:var(--ink2);font-weight:600;text-align:right;}
+        .pw-havale-not{
+          font-size:12.2px;color:var(--muted);line-height:1.55;
+          margin-top:10px;padding-top:10px;border-top:1px solid var(--line);
+        }
+        .pw-havale-not strong{color:var(--ink);}
+
         .pw-not{
           font-size:12.3px;color:var(--faint);line-height:1.55;
           text-align:center;margin-top:16px;padding-top:14px;
@@ -240,6 +334,43 @@ export default function PaywallModal({
               <button className="pw-btn pw-btn-o" onClick={kapat}>
                 Şimdilik arşivime bakayım
               </button>
+
+              {IBAN && (
+                <div className="pw-havale">
+                  <div className="pw-havale-bas">
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                      <rect x="2" y="4.5" width="12" height="8.5" rx="1.4"
+                        stroke="currentColor" strokeWidth="1.4" />
+                      <path d="M2 7.5h12" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                    Havale / EFT ile ödeme
+                  </div>
+
+                  <div className="pw-iban-sat">
+                    <span className="pw-iban-no">{IBAN}</span>
+                    <button className={`pw-kopyala ${kopyalandi ? 'ok' : ''}`} onClick={ibanKopyala}>
+                      {kopyalandi ? 'Kopyalandı' : 'Kopyala'}
+                    </button>
+                  </div>
+
+                  {IBAN_ALICI && (
+                    <div className="pw-havale-satir">
+                      <span>Alıcı</span><span>{IBAN_ALICI}</span>
+                    </div>
+                  )}
+                  {BANKA && (
+                    <div className="pw-havale-satir">
+                      <span>Banka</span><span>{BANKA}</span>
+                    </div>
+                  )}
+
+                  <div className="pw-havale-not">
+                    Açıklama kısmına <strong>firma adınızı</strong> yazmanız, ödemenizi
+                    hızlıca eşleştirmemizi sağlar. Havale sonrası WhatsApp'tan bilgi
+                    verirseniz aboneliğinizi <strong>aynı gün</strong> açarız.
+                  </div>
+                </div>
+              )}
             </>
           )}
 
