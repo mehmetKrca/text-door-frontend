@@ -3,10 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import API, { getAbonelikDurumu, abonelikBaslat } from './services/api';
 import { useAuth } from './context/AuthContext.jsx';
 import { hesapla, hesaplaSineklik } from './utils/fiyatHesapla.js';
-import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI, sineklikRenkVarMi, CAM_TIPLERI } from './utils/fiyatTablosu.js';
-import { patronOzetiHesapla, ARALIK_ADLARI, URUN_ADLARI, DURUM_ADLARI } from './utils/patronOzeti.js';
+import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI, sineklikRenkVarMi } from './utils/fiyatTablosu.js';
+import { patronOzetiHesapla } from './utils/patronOzeti.js';
 import DogramaCizim from './components/DogramaCizim.jsx';
 import TeklifYazdir from './components/TeklifYazdir.jsx';
+import PatronOzeti from './features/patron/PatronOzeti.jsx';
+import FiyatAyarlari from './features/fiyatlar/FiyatAyarlari.jsx';
 
 // 🎯 TOKEN ALMA YARDIMCI FONKSİYONU
 const getAuthToken = () => {
@@ -587,7 +589,6 @@ export default function PvcCizimEkrani() {
     () => patronOzetiHesapla(musteriArsivi, fiyatTablo, { aralik: raporAralik }),
     [musteriArsivi, fiyatTablo, raporAralik]
   );
-  const monoStil = { fontFamily: "'JetBrains Mono', monospace", fontVariantNumeric: 'tabular-nums' };
 
   return (
     <div className="ana-konteyner" style={{ position: 'relative', minHeight: '100vh', fontFamily: 'sans-serif', color: '#1E3A8A', backgroundColor: '#f8fafc', width: '100%', overflowX: 'hidden' }}>
@@ -1134,16 +1135,6 @@ export default function PvcCizimEkrani() {
               )}
             </div>
 
-            <div className="mobil-sutun" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '8px' }}>
-              <div className="mobil-tam-genislik">
-                <strong style={{ color: '#1E3A8A', display: 'block', fontSize: '16px' }}>💰 Birim Fiyat Ayarları</strong>
-                <span style={{ fontSize: '11px', color: '#64748b' }}>Değişiklikleri veritabanına sabitleyin.</span>
-              </div>
-              <button className="mobil-tam-genislik" onClick={handleFiyatlariBulutaKaydet} disabled={fiyatYukleniyor} style={{ padding: '10px 16px', backgroundColor: '#1E3A8A', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
-                {fiyatYukleniyor ? 'Yükleniyor...' : 'Fiyatları Sabitle ☁️'}
-              </button>
-            </div>
-
             <div style={{ marginBottom: '16px', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <strong style={{ color: '#1E3A8A', fontSize: '13px' }}>Profil Serisi:</strong>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -1155,300 +1146,21 @@ export default function PvcCizimEkrani() {
                 ))}
               </div>
             </div>
-            
-            <div className="mobil-sutun" style={{ display: 'flex', gap: '4px', marginBottom: '12px', flexWrap: 'wrap' }}>
-              <button className="mobil-tam-genislik" onClick={() => setAktifRenkSekmesi('beyaz')} style={{ flex: '1', padding: '8px', backgroundColor: aktifRenkSekmesi === 'beyaz' ? '#1E3A8A' : '#f1f5f9', color: aktifRenkSekmesi === 'beyaz' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Beyaz Seri</button>
-              <button className="mobil-tam-genislik" onClick={() => setAktifRenkSekmesi('renkli')} style={{ flex: '1', padding: '8px', backgroundColor: aktifRenkSekmesi === 'renkli' ? '#1E3A8A' : '#f1f5f9', color: aktifRenkSekmesi === 'renkli' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Renkli Seri</button>
-            </div>
 
-            {fiyatYukleniyor ? (
-              <div style={{ textAlign: 'center', padding: '24px', color: '#1E3A8A', fontWeight: 'bold' }}>
-                Fiyatlar veritabanından getiriliyor... ☁️
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', backgroundColor: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <div>
-                  <h4 style={{ margin: '0 0 8px 0', color: '#1E3A8A', borderBottom: '1px solid #eee', paddingBottom: '4px', fontSize: '13px' }}>
-                    {aktifRenkSekmesi === 'beyaz' ? 'Beyaz Seri' : 'Renkli Seri'} Profilleri (m)
-                  </h4>
-                  {[
-                    { key: 'kasa', label: 'Kasa' },
-                    { key: 'ortakayit', label: 'Ortakayıt' },
-                    { key: 'pencereKanadi', label: 'Pencere Kanadı' },
-                    { key: 'kapiKanadi', label: 'Kapı Kanadı' },
-                    { key: 'surmeKasa', label: 'Sürme Kasa' },
-                    { key: 'surmeKanadi', label: 'Sürme Kanadı' },
-                    { key: 'lambiri', label: 'Lambiri' }
-                  ].map(item => (
-                    <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
-                      {item.label}:
-                      <div><input type="number" value={fiyatTablo.seriler[aktifRenkSekmesi][item.key] ?? ''} onChange={(e) => handleFiyatDegisimi(['seriler', aktifRenkSekmesi, item.key], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
-                    </label>
-                  ))}
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 8px 0', color: '#1E3A8A', borderBottom: '1px solid #eee', paddingBottom: '4px', fontSize: '13px' }}>Cam Tipleri (m²)</h4>
-                  {[
-                    { key: 'buzlu_tek', label: 'Buzlu Tek Cam' },
-                    { key: 'klasik', label: 'Klasik Isıcam' },
-                    { key: 'konfor', label: 'Konfor Cam' },
-                    { key: 'lamina', label: 'Lamina Cam' }
-                  ].map(item => (
-                    <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
-                      {item.label}:
-                      <div><input type="number" value={fiyatTablo.camlar[item.key] ?? ''} onChange={(e) => handleFiyatDegisimi(['camlar', item.key], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
-                    </label>
-                  ))}
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px', color: '#1E3A8A' }}>
-                    Cam İşçiliği:
-                    <div><input type="number" value={fiyatTablo.camIsciligi ?? ''} onChange={(e) => handleFiyatDegisimi(['camIsciligi'], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
-                  </label>
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 8px 0', color: '#1E3A8A', borderBottom: '1px solid #eee', paddingBottom: '4px', fontSize: '13px' }}>Aksesuarlar (Adet)</h4>
-                  {[
-                    { key: 'tekAcilim', label: 'Tek Açılım' },
-                    { key: 'ciftAcilim', label: 'Çift Açılım' },
-                    { key: 'vasistas', label: 'Vasistas' },
-                    { key: 'kapiAksesuar', label: 'Genel Aksesuar' },
-                    { key: 'surmeAksesuar', label: 'Sürme Aksesuarı' }
-                  ].map(item => (
-                    <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
-                      {item.label}:
-                      <div><input type="number" value={fiyatTablo.aksesuarlar[item.key] ?? ''} onChange={(e) => handleFiyatDegisimi(['aksesuarlar', item.key], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {!fiyatYukleniyor && (
-              <div style={{ marginTop: '12px', backgroundColor: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid #eee', paddingBottom: '4px', marginBottom: '8px' }}>
-                  <h4 style={{ margin: 0, color: '#1E3A8A', fontSize: '13px' }}>Sineklik & Perde Fiyatları</h4>
-                  <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    Tepe Adımı (mm):
-                    <input type="number" value={fiyatTablo.tepeAdimiMM ?? ''} onChange={(e) => handleFiyatDegisimi(['tepeAdimiMM'], e.target.value)} style={{ width: '55px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/>
-                  </label>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                  {SINEKLIK_TIPLERI.map(sp => (
-                    <div key={sp.id}>
-                      <h5 style={{ margin: '0 0 8px 0', color: '#1E3A8A', fontSize: '12px' }}>{sp.ad}</h5>
-                      {[
-                        { key: 'cerceveM', label: 'Çerçeve (₺/m)' },
-                        ...(sp.renkVar ? [{ key: 'cerceveMRenkli', label: 'Renkli Çerçeve' }] : []),
-                        { key: 'kumasM2', label: 'Kumaş/Tel (₺/m²)' },
-                        { key: 'tepeBasiBirim', label: 'Tepe Başı (₺/adet)' },
-                        { key: 'iscilik', label: 'İşçilik (₺)' }
-                      ].map(item => (
-                        <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
-                          {item.label}:
-                          <div><input type="number" value={fiyatTablo[sp.id]?.[item.key] ?? ''} onChange={(e) => handleFiyatDegisimi([sp.id, item.key], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
-                        </label>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <FiyatAyarlari
+              tablo={fiyatTablo}
+              yukleniyor={fiyatYukleniyor}
+              degistir={handleFiyatDegisimi}
+              kaydet={handleFiyatlariBulutaKaydet}
+              aktifSeri={aktifRenkSekmesi}
+              seriDegis={setAktifRenkSekmesi}
+            />
           </div>
         )}
 
         {/* 6. SEKME: PATRON EKRANI */}
         {aktifSekme === 'patron' && patronMu && (
-          <div style={{ padding: '14px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', minHeight: '380px', width: '100%', boxSizing: 'border-box' }}>
-            <div className="mobil-sutun" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #1E3A8A', paddingBottom: '12px', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ margin: '0 0 4px 0', color: '#1E3A8A', fontSize: '20px' }}>📊 Patron & Fabrika Analiz Özeti</h3>
-                <p style={{ margin: 0, color: '#555', fontSize: '12px' }}>Seçtiğiniz döneme göre ciro, tüketim ve satış kırılımını görün.</p>
-              </div>
-              <div className="mobil-tam-genislik" style={{ display: 'flex', gap: '6px' }}>
-                {Object.entries(ARALIK_ADLARI).map(([id, ad]) => (
-                  <button key={id} onClick={() => setRaporAralik(id)} style={{ flex: 1, padding: '8px 14px', backgroundColor: raporAralik === id ? '#1E3A8A' : '#f1f5f9', color: raporAralik === id ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                    {ad}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 4 ÖZET KART */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', textAlign: 'center' }}>
-                <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>💰</span>
-                <strong style={{ color: '#757575', fontSize: '12px', display: 'block', textTransform: 'uppercase' }}>Ciro</strong>
-                <span style={{ ...monoStil, color: '#1E3A8A', fontSize: '22px', fontWeight: '900', display: 'block', marginTop: '6px' }}>
-                  {patronOzeti.ciro.toLocaleString('tr-TR')} ₺
-                </span>
-              </div>
-
-              <div style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', textAlign: 'center' }}>
-                <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>📁</span>
-                <strong style={{ color: '#757575', fontSize: '12px', display: 'block', textTransform: 'uppercase' }}>Proje Sayısı</strong>
-                <span style={{ ...monoStil, color: '#1E3A8A', fontSize: '22px', fontWeight: '900', display: 'block', marginTop: '6px' }}>
-                  {patronOzeti.projeSayisi}
-                </span>
-              </div>
-
-              <div style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', textAlign: 'center' }}>
-                <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>📦</span>
-                <strong style={{ color: '#757575', fontSize: '12px', display: 'block', textTransform: 'uppercase' }}>Kalem Sayısı</strong>
-                <span style={{ ...monoStil, color: '#1E3A8A', fontSize: '22px', fontWeight: '900', display: 'block', marginTop: '6px' }}>
-                  {patronOzeti.kalemSayisi}
-                </span>
-              </div>
-
-              <div style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', textAlign: 'center' }}>
-                <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>🔢</span>
-                <strong style={{ color: '#757575', fontSize: '12px', display: 'block', textTransform: 'uppercase' }}>Toplam Adet</strong>
-                <span style={{ ...monoStil, color: '#1E3A8A', fontSize: '22px', fontWeight: '900', display: 'block', marginTop: '6px' }}>
-                  {patronOzeti.toplamAdet}
-                </span>
-              </div>
-            </div>
-
-            {/* PROFİL TÜKETİMİ */}
-            <h4 style={{ color: '#1E3A8A', borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '12px', fontSize: '14px' }}>Profil Tüketimi</h4>
-            <div className="tablo-kapsayici" style={{ marginBottom: '24px' }}>
-              <table style={{ width: '100%', backgroundColor: 'white', border: '1px solid #e2e8f0', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '320px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A' }}>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Seri</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Metre</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>Beyaz Seri</td>
-                    <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{patronOzeti.profil.beyaz.metre.toLocaleString('tr-TR')} m</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>Renkli Seri</td>
-                    <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{patronOzeti.profil.renkli.metre.toLocaleString('tr-TR')} m</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '8px', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>Toplam</td>
-                    <td style={{ ...monoStil, padding: '8px', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>{patronOzeti.profil.toplamMetre.toLocaleString('tr-TR')} m</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* CAM TÜKETİMİ */}
-            <h4 style={{ color: '#1E3A8A', borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '12px', fontSize: '14px' }}>Cam Tüketimi</h4>
-            <div className="tablo-kapsayici" style={{ marginBottom: '24px' }}>
-              <table style={{ width: '100%', backgroundColor: 'white', border: '1px solid #e2e8f0', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '320px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A' }}>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Cam Tipi</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>m²</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {CAM_TIPLERI.map(c => (
-                    <tr key={c.id}>
-                      <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>{c.ad}</td>
-                      <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{(patronOzeti.camlar[c.id]?.m2 ?? 0).toFixed(2)} m²</td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td style={{ padding: '8px', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>Toplam</td>
-                    <td style={{ ...monoStil, padding: '8px', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>{patronOzeti.camToplamM2.toFixed(2)} m²</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* SİNEKLİK VE PERDE TÜKETİMİ */}
-            <h4 style={{ color: '#1E3A8A', borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '12px', fontSize: '14px' }}>Sineklik ve Perde Tüketimi</h4>
-            <div className="tablo-kapsayici" style={{ marginBottom: '24px' }}>
-              <table style={{ width: '100%', backgroundColor: 'white', border: '1px solid #e2e8f0', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '560px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A' }}>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Tip</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Adet</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Çerçeve (m)</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Kumaş/Tel (m²)</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Tepe Sayısı</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#dbeafe' }}>Ciro</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {SINEKLIK_TIPLERI.map(sp => {
-                    const s = patronOzeti.sineklikler[sp.id] || { adet: 0, cerceveM: 0, kumasM2: 0, tepeSayisi: 0, ciro: 0 };
-                    return (
-                      <tr key={sp.id}>
-                        <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>{sp.ad}</td>
-                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{s.adet}</td>
-                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{s.cerceveM.toLocaleString('tr-TR')} m</td>
-                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{s.kumasM2.toFixed(2)} m²</td>
-                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{s.tepeSayisi}</td>
-                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee', backgroundColor: '#dbeafe', fontWeight: 'bold', color: '#1E3A8A' }}>{s.ciro.toLocaleString('tr-TR')} ₺</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* ÜRÜN BAZLI SATIŞ */}
-            <h4 style={{ color: '#1E3A8A', borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '12px', fontSize: '14px' }}>Ürün Bazlı Satış</h4>
-            <div className="tablo-kapsayici" style={{ marginBottom: '24px' }}>
-              <table style={{ width: '100%', backgroundColor: 'white', border: '1px solid #e2e8f0', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '320px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A' }}>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Ürün</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Adet</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Ciro</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(patronOzeti.urunTipleri).length === 0 ? (
-                    <tr>
-                      <td colSpan="3" style={{ padding: '12px', textAlign: 'center', color: '#777' }}>Bu dönemde satış yok.</td>
-                    </tr>
-                  ) : (
-                    Object.entries(patronOzeti.urunTipleri)
-                      .sort((a, b) => b[1].ciro - a[1].ciro)
-                      .map(([tip, v]) => (
-                        <tr key={tip}>
-                          <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>{URUN_ADLARI[tip] || tip}</td>
-                          <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{v.adet}</td>
-                          <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{v.ciro.toLocaleString('tr-TR')} ₺</td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* DURUM DAĞILIMI */}
-            <h4 style={{ color: '#1E3A8A', borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '12px', fontSize: '14px' }}>Durum Dağılımı</h4>
-            <div className="tablo-kapsayici">
-              <table style={{ width: '100%', backgroundColor: 'white', border: '1px solid #e2e8f0', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '320px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#eff6ff', color: '#1E3A8A' }}>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Durum</th>
-                    <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Proje Sayısı</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(patronOzeti.durumlar).length === 0 ? (
-                    <tr>
-                      <td colSpan="2" style={{ padding: '12px', textAlign: 'center', color: '#777' }}>Bu dönemde proje yok.</td>
-                    </tr>
-                  ) : (
-                    Object.entries(patronOzeti.durumlar).map(([durum, sayi]) => (
-                      <tr key={durum}>
-                        <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>{DURUM_ADLARI[durum] || durum}</td>
-                        <td style={{ ...monoStil, padding: '8px', borderBottom: '1px solid #eee' }}>{sayi}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <PatronOzeti ozet={patronOzeti} aralik={raporAralik} aralikDegis={setRaporAralik} />
         )}
 
       </div>
