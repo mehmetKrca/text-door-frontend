@@ -56,6 +56,11 @@ API.interceptors.response.use(
     const originalRequest = error.config;
     const status = error.response?.status;
 
+    if (status === 402) {
+      window.dispatchEvent(new CustomEvent('ewindoore-paywall', { detail: error.response?.data }));
+      return Promise.reject(error);
+    }
+
     if (status !== 401 || !originalRequest || originalRequest._retry) {
       return Promise.reject(error);
     }

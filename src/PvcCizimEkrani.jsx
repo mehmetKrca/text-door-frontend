@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import API, { getAbonelikDurumu, abonelikBaslat } from './services/api';
+import API, { getAbonelikDurumu } from './services/api';
 import { useAuth } from './context/AuthContext.jsx';
 import { hesapla, hesaplaSineklik } from './utils/fiyatHesapla.js';
 import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI, sineklikRenkVarMi } from './utils/fiyatTablosu.js';
 import { patronOzetiHesapla } from './utils/patronOzeti.js';
 import DogramaCizim from './components/DogramaCizim.jsx';
 import TeklifYazdir from './components/TeklifYazdir.jsx';
+import PaywallModal from './components/PaywallModal.jsx';
 import PatronOzeti from './features/patron/PatronOzeti.jsx';
 import FiyatAyarlari from './features/fiyatlar/FiyatAyarlari.jsx';
 import CrmArsiv from './features/arsiv/CrmArsiv.jsx';
@@ -49,47 +50,40 @@ export default function PvcCizimEkrani() {
   const [erisimIzni, setErisimIzni] = useState(true);
   const [kalanDenemeGunu, setKalanDenemeGunu] = useState(14);
   const [abonelikAktif, setAbonelikAktif] = useState(false);
+  const [abonelikDonduruldu, setAbonelikDonduruldu] = useState(false);
   const [paywallModalAcik, setPaywallModalAcik] = useState(false);
 
-  const [seciliPeriyot, setSeciliPeriyot] = useState('Aylık');
-  const [kartAd, setKartAd] = useState('');
-  const [kartNo, setKartNo] = useState('');
-  const [odemeYukleniyor, setOdemeYukleniyor] = useState(false);
-
-  useEffect(() => {
-    const denetle = async () => {
-      try {
-        const res = await getAbonelikDurumu();
-        if (res.data) {
-          setErisimIzni(res.data.erisim_izni);
-          setKalanDenemeGunu(res.data.kalan_deneme_gunu);
-          setAbonelikAktif(res.data.abonelik_aktif);
-          if (!res.data.erisim_izni) setPaywallModalAcik(true);
-        }
-      } catch (err) {
-        console.error("Abonelik durumu sorgulanamadı:", err);
-      }
-    };
-    denetle();
-  }, []);
-
-  const handleAbonelikOde = async (e) => {
-    e.preventDefault();
-    setOdemeYukleniyor(true);
+  const denetleAbonelikDurumu = async () => {
     try {
-      const res = await abonelikBaslat(seciliPeriyot);
-      if (res.data && res.data.erisim_izni) {
-        alert("Tebrikler! eWindoore Premium aboneliğin başarıyla başlatıldı. 🚀");
-        setErisimIzni(true);
-        setAbonelikAktif(true);
-        setPaywallModalAcik(false);
+      const res = await getAbonelikDurumu();
+      if (res.data) {
+        setErisimIzni(res.data.erisim_izni);
+        setKalanDenemeGunu(res.data.kalan_deneme_gunu);
+        setAbonelikAktif(res.data.abonelik_aktif);
+        setAbonelikDonduruldu(!!res.data.abonelik_donduruldu);
+        if (!res.data.erisim_izni) setPaywallModalAcik(true);
       }
     } catch (err) {
-      alert("Ödeme alınırken bir hata oluştu, lütfen tekrar deneyiniz.");
-    } finally {
-      setOdemeYukleniyor(false);
+      console.error("Abonelik durumu sorgulanamadı:", err);
     }
   };
+
+  useEffect(() => {
+    denetleAbonelikDurumu();
+  }, []);
+
+  // Backend 402 dondugunde api.js bu eventi tetikler; modal aninda acilir
+  // ve abonelik durumu tazelenerek dogru sebep/kalan gun gosterilir.
+  useEffect(() => {
+    const handlePaywallEvent = () => {
+      setPaywallModalAcik(true);
+      denetleAbonelikDurumu();
+    };
+    window.addEventListener('ewindoore-paywall', handlePaywallEvent);
+    return () => window.removeEventListener('ewindoore-paywall', handlePaywallEvent);
+  }, []);
+
+  const paywallSebep = abonelikDonduruldu ? 'donduruldu' : (abonelikAktif ? 'abonelik' : 'deneme');
 
   useEffect(() => {
     if (!patronMu && ['patron', 'fiyatlar', 'calisan_ekle'].includes(aktifSekme)) {
@@ -646,7 +640,7 @@ export default function PvcCizimEkrani() {
       )}
 
       {/* ANA KAPSAYICI */}
-      <div className="ana-kapsayici" style={{ padding: '16px', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box', filter: !erisimIzni ? 'blur(6px)' : 'none', pointerEvents: !erisimIzni ? 'none' : 'auto' }}>
+      <div className="ana-kapsayici" style={{ padding: '16px', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
 
       {/* NORMAL UYGULAMA PANELİ */}
       <div>
@@ -1071,21 +1065,13 @@ export default function PvcCizimEkrani() {
       </div>
 
       {/* PAYWALL MODALI */}
-      {(paywallModalAcik || !erisimIzni) && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '400px', padding: '24px', textAlign: 'center' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '900', color: '#1E3A8A', margin: '0 0 10px 0' }}>14 Günlük Deneme Doldu!</h2>
-            <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '20px' }}>Kullanmaya devam etmek için aboneliğinizi başlatın.</p>
-            <form onSubmit={handleAbonelikOde} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <input type="text" required value={kartAd} onChange={e => setKartAd(e.target.value)} placeholder="Kart Ad Soyad" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-              <input type="text" required maxLength="19" value={kartNo} onChange={e => setKartNo(e.target.value)} placeholder="Kart Numarası" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-              <button type="submit" disabled={odemeYukleniyor} style={{ width: '100%', backgroundColor: '#1E3A8A', color: '#ffffff', border: 'none', padding: '12px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                {odemeYukleniyor ? 'İşleniyor...' : 'Aboneliği Başlat 💳'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      <PaywallModal
+        acik={paywallModalAcik}
+        kapat={() => setPaywallModalAcik(false)}
+        sebep={paywallSebep}
+        kalanGun={kalanDenemeGunu}
+        firmaAdi={firmaAdi}
+      />
 
       <TeklifYazdir
         firmaAdi={firmaAdi}
