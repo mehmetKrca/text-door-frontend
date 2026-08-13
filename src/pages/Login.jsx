@@ -815,9 +815,10 @@ export default function Login() {
               <div className="ew-f">
                 <label className="ew-lbl">E-posta</label>
                 <input
-                  className="ew-in" type="email" value={kullaniciAdi}
+                  className="ew-in" type={isLoginModu ? 'text' : 'email'} value={kullaniciAdi}
                   onChange={(e) => setKullaniciAdi(e.target.value)}
-                  placeholder="ornek@firma.com" autoComplete="email"
+                  placeholder={isLoginModu ? 'E-posta veya kullanıcı adı' : 'ornek@firma.com'}
+                  autoComplete="email"
                 />
               </div>
 
