@@ -346,7 +346,7 @@ export default function PvcCizimEkrani() {
       gSagYukseklik: gSagYuk,
       icYukseklik: sonuc.olculer?.icYukseklik ?? Math.max(0, gYuk - (2 * p)),
       hesaplananGenislikler: sonuc.olculer?.bolmeGenislikleri ?? [],
-      isKapiMi: ['kapi', 'wc_kapi', 'balkonkapi'].includes(urunTipi),
+      isKapiMi: ['kapi', 'wc_kapi', 'balkonkapi', 'fransiz'].includes(urunTipi),
       gercekLambiriVarMi: (sonuc.metraj?.lambiriM2 ?? 0) > 0,
       hamImalatMaliyeti: sonuc.maliyet?.ham ?? 0,
       anlikGenelToplam: sonuc.teklifDetay?.toplam ?? 0,
@@ -849,6 +849,12 @@ export default function PvcCizimEkrani() {
                     <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#1E3A8A', marginTop: '2px' }}>
                       {hamImalatMaliyeti.toLocaleString('tr-TR')} ₺
                     </div>
+                    {(sonuc.maliyet?.lambiri ?? 0) > 0 && (
+                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Lambiri:</span>
+                        <strong style={{ color: '#1E3A8A' }}>{sonuc.maliyet.lambiri.toLocaleString('tr-TR')} ₺</strong>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ backgroundColor: '#eff6ff', padding: '10px', borderRadius: '6px', border: '1px solid #bfdbfe', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
