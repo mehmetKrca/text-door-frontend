@@ -1,23 +1,24 @@
 {
+  "name": "eWindoore: PVC Dograma Cizim",
   "short_name": "eWindoore",
-  "name": "eWindoore - Dijital Çizim ve İmalat SaaS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d1e35",
+  "orientation": "any",
+  "lang": "tr",
   "icons": [
     {
-      "src": "favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icons/ikon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icons.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icons/ikon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#0f172a",
-  "background_color": "#0f172a",
-  "orientation": "portrait"
+  ]
 }
