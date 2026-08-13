@@ -9,17 +9,28 @@ export default function SiparisSepeti({ proje, projeAlanDegistir, sepet, sepetAk
         <div className="mobil-tam-genislik" style={{ flex: '1.5', minWidth: '260px' }}>
           <strong style={{ color: '#1E3A8A', display: 'block', marginBottom: '8px', fontSize: '14px' }}>📝 Proje ve Müşteri Bilgileri:</strong>
           <div className="mobil-sutun" style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <input type="text" placeholder="Müşteri / Proje Adı (Zorunlu)" value={proje.ad} onChange={(e) => projeAlanDegistir('ad', e.target.value)} style={{ flex: '2', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px' }}/>
-            <input type="text" placeholder="Telefon (Opsiyonel)" value={proje.tel} onChange={(e) => projeAlanDegistir('tel', e.target.value)} style={{ flex: '1', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px' }}/>
-            <input type="text" value={proje.tarih} onChange={(e) => projeAlanDegistir('tarih', e.target.value)} style={{ width: '100px', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px' }}/>
+            <div style={{ flex: '2' }}>
+              <label style={{ fontSize: '10px', color: '#555', display: 'block', marginBottom: '2px' }}>Müşteri Adı</label>
+              <input type="text" placeholder="Müşteri / Proje Adı (Zorunlu)" value={proje.ad} onChange={(e) => projeAlanDegistir('ad', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px', boxSizing: 'border-box' }}/>
+            </div>
+            <div style={{ flex: '1' }}>
+              <label style={{ fontSize: '10px', color: '#555', display: 'block', marginBottom: '2px' }}>Telefon</label>
+              <input type="text" placeholder="Telefon (Opsiyonel)" value={proje.tel} onChange={(e) => projeAlanDegistir('tel', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px', boxSizing: 'border-box' }}/>
+            </div>
+            <div style={{ width: '100px' }}>
+              <label style={{ fontSize: '10px', color: '#555', display: 'block', marginBottom: '2px' }}>Teklif Tarihi</label>
+              <input type="text" value={proje.tarih} onChange={(e) => projeAlanDegistir('tarih', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px', boxSizing: 'border-box' }}/>
+            </div>
           </div>
 
           <div style={{ marginBottom: '8px' }}>
-            <input type="text" placeholder="Müşteri Adresi (Fatura için opsiyonel)" value={proje.adres} onChange={(e) => projeAlanDegistir('adres', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px' }}/>
+            <label style={{ fontSize: '10px', color: '#555', display: 'block', marginBottom: '2px' }}>Adres</label>
+            <input type="text" placeholder="Müşteri Adresi (Fatura için opsiyonel)" value={proje.adres} onChange={(e) => projeAlanDegistir('adres', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px', boxSizing: 'border-box' }}/>
           </div>
 
           <div style={{ marginBottom: '12px' }}>
-            <textarea placeholder="Siparişe / Atölyeye özel notlar ekleyin (Müşteri PDF'te görebilir)" value={proje.not} onChange={(e) => projeAlanDegistir('not', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px', minHeight: '50px' }}></textarea>
+            <label style={{ fontSize: '10px', color: '#555', display: 'block', marginBottom: '2px' }}>Sipariş Notu</label>
+            <textarea placeholder="Siparişe / Atölyeye özel notlar ekleyin (Müşteri PDF'te görebilir)" value={proje.not} onChange={(e) => projeAlanDegistir('not', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px', minHeight: '50px', boxSizing: 'border-box' }}></textarea>
           </div>
 
           <div className="mobil-sutun" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
