@@ -6,6 +6,7 @@ import { hesapla, hesaplaSineklik } from './utils/fiyatHesapla.js';
 import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI, sineklikRenkVarMi } from './utils/fiyatTablosu.js';
 import { patronOzetiHesapla } from './utils/patronOzeti.js';
 import DogramaCizim from './components/DogramaCizim.jsx';
+import SineklikCizim, { SINEKLIK_RENKLERI, sineklikRenkKademesi } from './components/SineklikCizim.jsx';
 import TeklifYazdir from './components/TeklifYazdir.jsx';
 import PaywallModal from './components/PaywallModal.jsx';
 import PatronOzeti from './features/patron/PatronOzeti.jsx';
@@ -209,7 +210,7 @@ export default function PvcCizimEkrani() {
   const [spYukseklik, setSpYukseklik] = useState(2000);
   const [spAdet, setSpAdet] = useState(1);
   const [spAcilimYonu, setSpAcilimYonu] = useState('dikey');
-  const [spRenkKademesi, setSpRenkKademesi] = useState('beyaz');
+  const [spRenk, setSpRenk] = useState('beyaz');
 
   const [aktifRenkSekmesi, setAktifRenkSekmesi] = useState('beyaz');
   
@@ -365,17 +366,19 @@ export default function PvcCizimEkrani() {
     isKapiMi, gercekLambiriVarMi, hamImalatMaliyeti, anlikGenelToplam, sonuc
   } = hesaplananVeriler;
 
+  const spEfektifAcilimYonu = spTipi === 'plisePerde' ? spAcilimYonu : 'yatay';
+
   const sineklikSonucu = useMemo(() => {
     const girdi = {
       genislik: spGenislik,
       yukseklik: spYukseklik,
       adet: spAdet,
       tip: spTipi,
-      acilimYonu: spAcilimYonu,
-      renkKademesi: spRenkKademesi,
+      acilimYonu: spEfektifAcilimYonu,
+      renkKademesi: sineklikRenkKademesi(spRenk),
     };
     return hesaplaSineklik(girdi, fiyatTablo);
-  }, [spGenislik, spYukseklik, spAdet, spTipi, spAcilimYonu, spRenkKademesi, fiyatTablo]);
+  }, [spGenislik, spYukseklik, spAdet, spTipi, spEfektifAcilimYonu, spRenk, fiyatTablo]);
 
   const sepetGenelToplam = useMemo(() => sepet.reduce((acc, kalem) => acc + (Number(kalem.fiyat) || 0), 0), [sepet]);
   const sepetToplamAdet = useMemo(() => sepet.reduce((acc, kalem) => acc + (Number(kalem.adet) || 1), 0), [sepet]);
@@ -429,10 +432,10 @@ export default function PvcCizimEkrani() {
       genislik: Number(spGenislik),
       yukseklik: Number(spYukseklik),
       adet: Number(spAdet) || 1,
-      renk: sineklikRenkVarMi(spTipi) ? spRenkKademesi : 'Standart',
-      renkIsmi: sineklikRenkVarMi(spTipi) ? (spRenkKademesi === 'renkli' ? 'Renkli Seri' : 'Beyaz Seri') : 'Standart',
-      renkKademesi: sineklikRenkVarMi(spTipi) ? spRenkKademesi : 'beyaz',
-      acilimYonu: spAcilimYonu,
+      renk: sineklikRenkVarMi(spTipi) ? spRenk : 'Standart',
+      renkIsmi: sineklikRenkVarMi(spTipi) ? (SINEKLIK_RENKLERI[spRenk]?.ad || 'Klasik Beyaz') : 'Standart',
+      renkKademesi: sineklikRenkVarMi(spTipi) ? sineklikRenkKademesi(spRenk) : 'beyaz',
+      acilimYonu: spEfektifAcilimYonu,
       tepeSayisi: sineklikSonucu.tepeSayisi,
       fiyat: Math.ceil(anlikTutar)
     };
@@ -587,7 +590,7 @@ export default function PvcCizimEkrani() {
   const handleKalemiDuzenle = (kalem) => {
     setDuzenlenenKalemId(kalem.id); setKalemAdi(kalem.isim);
     if (SP_URUN_TIPLERI_TUMU.includes(kalem.urunTipi)) {
-      setSpTipi(spTipiDonustur(kalem.urunTipi)); setSpGenislik(kalem.genislik || 800); setSpYukseklik(kalem.yukseklik || 2000); setSpAdet(kalem.adet || 1); setSpAcilimYonu(kalem.acilimYonu === 'yatay' ? 'yatay' : 'dikey'); setSpRenkKademesi(kalem.renkKademesi === 'renkli' ? 'renkli' : 'beyaz'); handleSekmeDegistir('sineklik');
+      setSpTipi(spTipiDonustur(kalem.urunTipi)); setSpGenislik(kalem.genislik || 800); setSpYukseklik(kalem.yukseklik || 2000); setSpAdet(kalem.adet || 1); setSpAcilimYonu(kalem.acilimYonu === 'yatay' ? 'yatay' : 'dikey'); setSpRenk(SINEKLIK_RENKLERI[kalem.renk] ? kalem.renk : 'beyaz'); handleSekmeDegistir('sineklik');
     } else {
       setUrunTipi(kalem.urunTipi); setGenislik(kalem.genislik); setYukseklik(kalem.yukseklik); setSagYukseklik(kalem.sagYukseklik || 1600); setBolmeSayisi(kalem.bolmeSayisi); setKanatlar(kalem.kanatlar); setBolmeOlculeri(kalem.bolmeOlculeri || Array(kalem.bolmeSayisi).fill(0)); setRenk(kalem.renk); setCamTipi(camTipiDonustur(kalem.camTipi)); setAltPanelLambiri(kalem.altPanelLambiri !== undefined ? kalem.altPanelLambiri : true); setEnineBolmeVar(kalem.enineBolmeVar || false); setEnineBolmeYerdenYukseklik(kalem.enineBolmeYerdenYukseklik || 800); setLambiriBoyu(kalem.lambiriBoyu || 800); setProfilSerisi(kalem.profilSerisi || 70); setAciModu(kalem.aciModu || 'aci_bul'); setManuelAci(kalem.manuelAci || 20); setEgimYonu(kalem.egimYonu || 'saga_yukselir'); handleSekmeDegistir('cizim');
     }
@@ -917,7 +920,7 @@ export default function PvcCizimEkrani() {
             <div className="mobil-sutun" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <div className="mobil-tam-genislik" style={{ padding: '12px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', flex: '1', minWidth: '260px' }}>
                 <h4 style={{ margin: '0 0 8px 0', color: '#1E3A8A', fontSize: '14px' }}>1. Ürün Tipi ve Ölçüler</h4>
-                <select value={spTipi} onChange={(e) => setSpTipi(e.target.value)} style={{ padding: '8px', width: '100%', marginBottom: '12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }}>
+                <select value={spTipi} onChange={(e) => { const yeniTip = e.target.value; setSpTipi(yeniTip); setSpAcilimYonu(yeniTip === 'plisePerde' ? 'dikey' : 'yatay'); }} style={{ padding: '8px', width: '100%', marginBottom: '12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }}>
                   {SINEKLIK_TIPLERI.map(t => (
                     <option key={t.id} value={t.id}>{t.ad}</option>
                   ))}
@@ -929,25 +932,38 @@ export default function PvcCizimEkrani() {
                   <label style={{ flex: '0.6', fontSize: '12px' }}>Adet: <input type="number" value={spAdet} onChange={e => setSpAdet(e.target.value === '' ? '' : Number(e.target.value))} style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/></label>
                 </div>
 
-                <h4 style={{ margin: '0 0 6px 0', color: '#1E3A8A', fontSize: '13px' }}>2. Açılım Yönü</h4>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                  <button type="button" onClick={() => setSpAcilimYonu('dikey')} style={{ flex: 1, padding: '8px', backgroundColor: spAcilimYonu === 'dikey' ? '#1E3A8A' : '#f1f5f9', color: spAcilimYonu === 'dikey' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Dikey Açılım</button>
-                  <button type="button" onClick={() => setSpAcilimYonu('yatay')} style={{ flex: 1, padding: '8px', backgroundColor: spAcilimYonu === 'yatay' ? '#1E3A8A' : '#f1f5f9', color: spAcilimYonu === 'yatay' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Yatay Açılım</button>
-                </div>
+                {spTipi === 'plisePerde' && (
+                  <>
+                    <h4 style={{ margin: '0 0 6px 0', color: '#1E3A8A', fontSize: '13px' }}>2. Açılım Yönü</h4>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                      <button type="button" onClick={() => setSpAcilimYonu('dikey')} style={{ flex: 1, padding: '8px', backgroundColor: spAcilimYonu === 'dikey' ? '#1E3A8A' : '#f1f5f9', color: spAcilimYonu === 'dikey' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Dikey Açılım</button>
+                      <button type="button" onClick={() => setSpAcilimYonu('yatay')} style={{ flex: 1, padding: '8px', backgroundColor: spAcilimYonu === 'yatay' ? '#1E3A8A' : '#f1f5f9', color: spAcilimYonu === 'yatay' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Yatay Açılım</button>
+                    </div>
+                  </>
+                )}
 
-                {sineklikRenkVarMi(spTipi) ? (
+                {sineklikRenkVarMi(spTipi) && (
                   <>
                     <h4 style={{ margin: '0 0 6px 0', color: '#1E3A8A', fontSize: '13px' }}>3. Profil Rengi</h4>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button type="button" onClick={() => setSpRenkKademesi('beyaz')} style={{ flex: 1, padding: '8px', backgroundColor: spRenkKademesi === 'beyaz' ? '#1E3A8A' : '#f1f5f9', color: spRenkKademesi === 'beyaz' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Beyaz Seri</button>
-                      <button type="button" onClick={() => setSpRenkKademesi('renkli')} style={{ flex: 1, padding: '8px', backgroundColor: spRenkKademesi === 'renkli' ? '#1E3A8A' : '#f1f5f9', color: spRenkKademesi === 'renkli' ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Renkli Seri</button>
+                      {Object.keys(SINEKLIK_RENKLERI).map((r) => (
+                        <button key={r} type="button" onClick={() => setSpRenk(r)} style={{ flex: 1, padding: '8px', backgroundColor: spRenk === r ? '#1E3A8A' : '#f1f5f9', color: spRenk === r ? '#fff' : '#333', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>{SINEKLIK_RENKLERI[r].ad}</button>
+                      ))}
                     </div>
                   </>
-                ) : (
-                  <div style={{ padding: '8px', backgroundColor: '#eff6ff', color: '#1E3A8A', borderRadius: '4px', fontSize: '11px', borderLeft: '3px solid #1E3A8A' }}>
-                    Not: Plise perdede profil rengi fiyatı etkilemez.
-                  </div>
                 )}
+              </div>
+
+              <div className="mobil-tam-genislik cizim-svg-kapsayici" style={{ flex: '1 1 100%', border: '1px solid #cbd5e1', padding: '12px 10px', backgroundColor: '#ffffff', borderRadius: '8px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <SineklikCizim
+                  tip={spTipi}
+                  genislik={spGenislik}
+                  yukseklik={spYukseklik}
+                  acilimYonu={spEfektifAcilimYonu}
+                  renkId={spRenk}
+                  tepeSayisi={sineklikSonucu.tepeSayisi}
+                  adet={spAdet}
+                />
               </div>
 
               <div className="mobil-tam-genislik" style={{ padding: '14px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', flex: '1', minWidth: '240px' }}>
@@ -963,7 +979,7 @@ export default function PvcCizimEkrani() {
                         Kıvırım (tepe) sayısı: <strong style={{ color: '#1E3A8A' }}>{sineklikSonucu.tepeSayisi ?? 0}</strong> adet
                       </div>
                       <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '2px' }}>
-                        {sineklikSonucu.tepeSayisi ?? 0} tepe {spAcilimYonu === 'yatay' ? 'en' : 'boy'} {sineklikSonucu.tepeOlcusu ?? 0}mm üzerinden
+                        {sineklikSonucu.tepeSayisi ?? 0} tepe {spEfektifAcilimYonu === 'yatay' ? 'en' : 'boy'} {sineklikSonucu.tepeOlcusu ?? 0}mm üzerinden
                       </div>
                     </div>
                   </>
