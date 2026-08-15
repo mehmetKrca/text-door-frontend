@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext.jsx';
+import { PAKETLER, PERIYOT_ETIKETLERI } from '../constants/paketler.js';
 
 /**
  * eWindoore — Profil Ekranı
@@ -9,7 +10,7 @@ import { useAuth } from '../context/AuthContext.jsx';
  * Backend uçları:
  *   GET  users/me/               → kullanıcı + rol + firma_adi
  *   GET  users/istatistikler/    → proje_sayisi, cizim_sayisi, teklif_sayisi, calisan_sayisi
- *   GET  users/abonelik-durumu/  → kalan gün, paket durumu
+ *   GET  users/abonelik-durumu/  → kalan gün, paket adı, abonelik başlangıç/bitiş
  *   PATCH users/profile-update/  → ad, soyad, eposta, telefon, firma adı
  *   POST users/password-change/  → şifre değiştir
  *   POST users/calisan-ekle/     → çalışan ekle (sadece patron)
@@ -38,6 +39,7 @@ export default function ProfilePage() {
 
   const [abonelik, setAbonelik] = useState({
     kalan_deneme_gunu: null, abonelik_aktif: false, deneme_doldu_mu: false,
+    abonelik_baslangic: null, abonelik_bitis: null, paket_adi: null,
   });
 
   const [profilKaydediliyor, setProfilKaydediliyor] = useState(false);
@@ -355,6 +357,23 @@ export default function ProfilePage() {
   const paketEtiketi = abonelik.abonelik_aktif
     ? (patronMu ? 'Kurumsal Üye' : 'Ekip Üyesi')
     : (abonelik.deneme_doldu_mu ? 'Deneme Bitti' : `Deneme · ${abonelik.kalan_deneme_gunu ?? 14} gün`);
+
+  const tarihFormatla = (deger) => {
+    if (!deger) return '—';
+    const d = new Date(deger);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
+  };
+
+  const aboneOlWhatsapp = (paket, periyotKey) => {
+    const periyot = PERIYOT_ETIKETLERI[periyotKey] || periyotKey;
+    const fiyat = paket.fiyat[periyotKey];
+    const firma = profil.firmaAdi || kullanici?.username || 'Firmam';
+    const mesaj =
+      `Merhaba, "${firma}" firması olarak eWindoore ${paket.ad} paketine ` +
+      `${periyot.toLocaleLowerCase('tr')} (${fiyat.tutar} ₺ ${fiyat.birim}) abone olmak istiyorum.`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(mesaj)}`, '_blank');
+  };
 
   return (
     <div className="pf">
@@ -890,6 +909,22 @@ export default function ProfilePage() {
               <div style={{ fontSize: 17, fontWeight: 700 }}>
                 {dondurulmus ? 'Donduruldu' : paketEtiketi}
               </div>
+              <div style={{ fontSize: 13.8, color: 'var(--ink2)', lineHeight: 1.9, marginTop: 8 }}>
+                <div><strong>Paket:</strong> {abonelik.paket_adi || 'Belirtilmemiş'}</div>
+                <div>
+                  <strong>Durum:</strong>{' '}
+                  {dondurulmus
+                    ? 'Donduruldu'
+                    : abonelik.abonelik_aktif
+                      ? 'Aktif'
+                      : (abonelik.deneme_doldu_mu ? 'Deneme Bitti' : 'Deneme Sürüyor')}
+                </div>
+                {!abonelik.abonelik_aktif && (
+                  <div><strong>Deneme Kalan Gün:</strong> {abonelik.deneme_doldu_mu ? 0 : (abonelik.kalan_deneme_gunu ?? 14)}</div>
+                )}
+                <div><strong>Abonelik Başlangıç:</strong> {tarihFormatla(abonelik.abonelik_baslangic)}</div>
+                <div><strong>Abonelik Bitiş:</strong> {tarihFormatla(abonelik.abonelik_bitis)}</div>
+              </div>
               {!abonelik.abonelik_aktif && !abonelik.deneme_doldu_mu && (
                 <div className="pf-ipucu">
                   Deneme süreniz bittiğinde çizim yapmaya devam etmek için abonelik
@@ -897,17 +932,51 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
+
             <div className="pf-f">
               <label className="pf-lbl">Paketler</label>
-              <div style={{ fontSize: 13.8, color: 'var(--ink2)', lineHeight: 1.7 }}>
-                <div><strong>Bireysel · 250 ₺/ay</strong> — tek kullanıcı, her şey sınırsız</div>
-                <div><strong>Kurumsal · 500 ₺/ay</strong> — sınırsız kullanıcı, yetki ayrımı</div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--line2, #cfdae8)' }}>Paket</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--line2, #cfdae8)' }}>Periyot</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--line2, #cfdae8)' }}>Fiyat</th>
+                      <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--line2, #cfdae8)' }} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {PAKETLER.flatMap((paket) =>
+                      Object.keys(PERIYOT_ETIKETLERI).map((periyotKey) => {
+                        const fiyat = paket.fiyat[periyotKey];
+                        return (
+                          <tr key={`${paket.id}-${periyotKey}`}>
+                            <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--line, #eef2f7)', fontWeight: 600 }}>{paket.ad}</td>
+                            <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--line, #eef2f7)' }}>{PERIYOT_ETIKETLERI[periyotKey]}</td>
+                            <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--line, #eef2f7)', whiteSpace: 'nowrap' }}>{fiyat.tutar} ₺ {fiyat.birim}</td>
+                            <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--line, #eef2f7)' }}>
+                              <button
+                                className="pf-btn pf-btn-o"
+                                style={{ padding: '6px 12px', fontSize: 12.5, whiteSpace: 'nowrap' }}
+                                onClick={() => aboneOlWhatsapp(paket, periyotKey)}
+                              >
+                                Abone Ol
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
               <div className="pf-ipucu">
-                Ödeme altyapısı hazırlanıyor. Abonelik başlatmak için bizimle
-                iletişime geçebilirsiniz.
+                Abone Ol, WhatsApp üzerinden bizimle iletişime geçirir; firma adınız ve
+                seçtiğiniz paket mesaja otomatik eklenir. Deneme süreniz bitmeden de
+                erken abone olabilirsiniz.
               </div>
             </div>
+
             <button className="pf-btn pf-btn-o" onClick={dondurmaDegistir} disabled={dondurmaIsleniyor}>
               {dondurmaIsleniyor
                 ? 'İşleniyor...'
