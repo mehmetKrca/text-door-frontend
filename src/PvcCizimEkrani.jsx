@@ -188,6 +188,7 @@ export default function PvcCizimEkrani() {
   const [enineBolmeYerdenYukseklik, setEnineBolmeYerdenYukseklik] = useState(800);
 
   const [lambiriBoyu, setLambiriBoyu] = useState(800);
+  const [lambiriYonu, setLambiriYonu] = useState('yatay');
   const [aciModu, setAciModu] = useState('aci_bul');
   const [manuelAci, setManuelAci] = useState(20);
   const [egimYonu, setEgimYonu] = useState('saga_yukselir');
@@ -407,7 +408,8 @@ export default function PvcCizimEkrani() {
       camIsmi: camFiyatlari[camTipi]?.isim || 'Klasik Isıcam',
       altPanelLambiri,
       lambiriBoyu,
-      enineBolmeVar, 
+      lambiriYonu,
+      enineBolmeVar,
       enineBolmeYerdenYukseklik: Number(enineBolmeYerdenYukseklik) || 800,
       profilSerisi,
       aciModu, 
@@ -603,7 +605,7 @@ export default function PvcCizimEkrani() {
     if (SP_URUN_TIPLERI_TUMU.includes(kalem.urunTipi)) {
       setSpTipi(spTipiDonustur(kalem.urunTipi)); setSpGenislik(kalem.genislik || 800); setSpYukseklik(kalem.yukseklik || 2000); setSpAdet(kalem.adet || 1); setSpAcilimYonu(kalem.acilimYonu === 'yatay' ? 'yatay' : 'dikey'); setSpRenk(SINEKLIK_RENKLERI[kalem.renk] ? kalem.renk : 'beyaz'); handleSekmeDegistir('sineklik');
     } else {
-      setUrunTipi(kalem.urunTipi); setGenislik(kalem.genislik); setYukseklik(kalem.yukseklik); setSagYukseklik(kalem.sagYukseklik || 1600); setBolmeSayisi(kalem.bolmeSayisi); setKanatlar(kalem.kanatlar); setBolmeOlculeri(kalem.bolmeOlculeri || Array(kalem.bolmeSayisi).fill(0)); setRenk(kalem.renk); setCamTipi(camTipiDonustur(kalem.camTipi)); setAltPanelLambiri(kalem.altPanelLambiri !== undefined ? kalem.altPanelLambiri : true); setEnineBolmeVar(kalem.enineBolmeVar || false); setEnineBolmeYerdenYukseklik(kalem.enineBolmeYerdenYukseklik || 800); setLambiriBoyu(kalem.lambiriBoyu || 800); setProfilSerisi(kalem.profilSerisi || 70); setAciModu(kalem.aciModu || 'aci_bul'); setManuelAci(kalem.manuelAci || 20); setEgimYonu(kalem.egimYonu || 'saga_yukselir'); handleSekmeDegistir('cizim');
+      setUrunTipi(kalem.urunTipi); setGenislik(kalem.genislik); setYukseklik(kalem.yukseklik); setSagYukseklik(kalem.sagYukseklik || 1600); setBolmeSayisi(kalem.bolmeSayisi); setKanatlar(kalem.kanatlar); setBolmeOlculeri(kalem.bolmeOlculeri || Array(kalem.bolmeSayisi).fill(0)); setRenk(kalem.renk); setCamTipi(camTipiDonustur(kalem.camTipi)); setAltPanelLambiri(kalem.altPanelLambiri !== undefined ? kalem.altPanelLambiri : true); setEnineBolmeVar(kalem.enineBolmeVar || false); setEnineBolmeYerdenYukseklik(kalem.enineBolmeYerdenYukseklik || 800); setLambiriBoyu(kalem.lambiriBoyu || 800); setLambiriYonu(kalem.lambiriYonu === 'dikey' ? 'dikey' : 'yatay'); setProfilSerisi(kalem.profilSerisi || 70); setAciModu(kalem.aciModu || 'aci_bul'); setManuelAci(kalem.manuelAci || 20); setEgimYonu(kalem.egimYonu || 'saga_yukselir'); handleSekmeDegistir('cizim');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
@@ -750,7 +752,8 @@ export default function PvcCizimEkrani() {
                 
                 {urunTipi !== 'acili' && (
                   <div style={{ padding: '8px', backgroundColor: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0', marginBottom: '8px' }}>
-                    <h4 style={{ margin: '0 0 4px 0', fontSize: '11px', color: '#64748b' }}>Bölme Genişlikleri (mm)</h4>
+                    <h4 style={{ margin: '0 0 4px 0', fontSize: '11px', color: '#64748b' }}>Bölme Genişlikleri (eksen ölçüsü, mm)</h4>
+                    <p style={{ margin: '0 0 4px 0', fontSize: '10px', color: '#94a3b8' }}>Kasa dışından kayıt eksenine ölçün. Toplamı toplam genişliğe eşit olmalı.</p>
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                        {bolmeler.map((index) => (
                           <input key={index} type="number" value={bolmeOlculeri[index] === 0 ? '' : bolmeOlculeri[index]} onChange={(e) => handleBolmeOlcuDegisimi(index, e.target.value)} placeholder="Oto" style={{ width: '50px', padding: '4px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/>
@@ -782,6 +785,11 @@ export default function PvcCizimEkrani() {
                         <div style={{ paddingLeft: '18px' }}>
                           <label style={{ fontSize: '10px', color: '#555', display: 'block' }}>Lambiri Yüksekliği (mm):</label>
                           <input type="number" value={lambiriBoyu} onChange={e => setLambiriBoyu(e.target.value === '' ? '' : Number(e.target.value))} style={{ width: '100%', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '11px' }} />
+                          <label style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '6px' }}>Yiv Yönü:</label>
+                          <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+                            <button type="button" onClick={() => setLambiriYonu('yatay')} style={{ flex: 1, padding: '4px', fontSize: '10px', borderRadius: '4px', border: '1px solid #cbd5e1', cursor: 'pointer', backgroundColor: lambiriYonu === 'yatay' ? '#1E3A8A' : '#fff', color: lambiriYonu === 'yatay' ? '#fff' : '#334155', fontWeight: lambiriYonu === 'yatay' ? 'bold' : 'normal' }}>Yatay Yiv</button>
+                            <button type="button" onClick={() => setLambiriYonu('dikey')} style={{ flex: 1, padding: '4px', fontSize: '10px', borderRadius: '4px', border: '1px solid #cbd5e1', cursor: 'pointer', backgroundColor: lambiriYonu === 'dikey' ? '#1E3A8A' : '#fff', color: lambiriYonu === 'dikey' ? '#fff' : '#334155', fontWeight: lambiriYonu === 'dikey' ? 'bold' : 'normal' }}>Dikey Yiv</button>
+                          </div>
                         </div>
                       )}
                     </>
@@ -846,6 +854,7 @@ export default function PvcCizimEkrani() {
                 profilSerisi={profilSerisi}
                 lambiriVar={gercekLambiriVarMi}
                 lambiriBoyu={lambiriBoyu}
+                lambiriYonu={lambiriYonu}
                 enineBolmeVar={enineBolmeVar}
                 enineBolmeYuksekligi={enineBolmeYerdenYukseklik}
                 camParcalari={sonuc?.metraj?.camParcalari}

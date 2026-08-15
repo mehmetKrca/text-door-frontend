@@ -38,6 +38,7 @@ export default function DogramaCizim({
   profilSerisi = 70,
   lambiriVar = false,
   lambiriBoyu = 900,
+  lambiriYonu = 'yatay',      // 'yatay' | 'dikey' — lambiri yivlerinin yönü
   enineBolmeVar = false,
   enineBolmeYuksekligi = 900,
   sineklikIste = false,
@@ -171,6 +172,7 @@ export default function DogramaCizim({
     genislik, yukseklik, sagYukseklik, bolmeSayisi, bolmeGenislikleri,
     kanatlar, profilSerisi, lambiriVar, lambiriBoyu, enineBolmeVar,
     enineBolmeYuksekligi, urunTipi, tuvalGenisligi, tuvalYuksekligi, olcuGoster,
+    lambiriYonu,
     camEtiketGoster, etiketGoster,
   ]);
 
@@ -237,11 +239,26 @@ export default function DogramaCizim({
   /* ---------- LAMBİRİ PANELİ ---------- */
   const Lambiri = ({ x, y, w, h }) => {
     if (w <= 1 || h <= 6) return null;
-    const yiv = Math.max(2, Math.floor(h / 11));
+
+    /* Yivler yatay ya da dikey dizilebilir — usta hangisini imal edecekse
+       onu seçer. Yiv sayısı panelin o yöndeki uzunluğuna göre belirlenir. */
+    const dikeyMi = lambiriYonu === 'dikey';
+    const uzunluk = dikeyMi ? w : h;
+    const yiv = Math.max(2, Math.floor(uzunluk / 11));
+
     return (
       <g>
         <rect x={x} y={y} width={w} height={h} fill="url(#ewProfil)" stroke={renk.koyu} strokeWidth="0.8" />
         {Array.from({ length: yiv }).map((_, k) => {
+          if (dikeyMi) {
+            const lx = x + (k + 1) * (w / (yiv + 1));
+            return (
+              <g key={k}>
+                <line x1={lx} y1={y + 2} x2={lx} y2={y + h - 2} stroke={renk.koyu} strokeWidth="0.55" opacity="0.7" />
+                <line x1={lx + 0.9} y1={y + 2} x2={lx + 0.9} y2={y + h - 2} stroke={renk.isik} strokeWidth="0.5" opacity="0.55" />
+              </g>
+            );
+          }
           const ly = y + (k + 1) * (h / (yiv + 1));
           return (
             <g key={k}>
@@ -593,7 +610,7 @@ export default function DogramaCizim({
           {renk.ad.toUpperCase()}
           {kanatlar.some((k) => k === 'cift_sag' || k === 'cift_sol') ? ' · ÇİFT AÇILIM' : ''}
           {sineklikIste ? ' · SİNEKLİK' : ''}
-          {lambiriVar && isKapi ? ' · LAMBİRİ' : ''}
+          {lambiriVar && isKapi ? (lambiriYonu === 'dikey' ? ' · LAMBİRİ (DİKEY)' : ' · LAMBİRİ (YATAY)') : ''}
         </text>
         <text x={TW - 12} y={TH - 8} textAnchor="end" fontSize="8.2" fill="#a9b5c4"
           fontFamily="'JetBrains Mono', monospace">

@@ -72,28 +72,52 @@ export function hesapla(g, t) {
   const dikmeToplamGenislik = dikmeSayisi * p;
   const netBolmeToplam = Math.max(0, icGen - dikmeToplamGenislik);
 
-  // bölme genişlikleri: elle girilenler korunur, kalan otomatik paylaşılır
+  /* BÖLME GENİŞLİKLERİ — elle girilen değerler EKSEN ÖLÇÜSÜDÜR.
+     Sektör standardı: kasa dışından kayıt eksenine, kayıt ekseninden kayıt
+     eksenine, son kayıt ekseninden kasa dışına. Bu ölçülerin toplamı toplam
+     genişliğe eşittir. Net cam/kanat açıklığı buradan türetilir.
+
+     Örnek: 1500 mm, 2 bölme, kullanıcı 750 + 750 girer.
+       Bölme 1 net = 750 - 70 (kasa) - 35 (yarım kayıt) = 645
+       Bölme 2 net = 750 - 35 (yarım kayıt) - 70 (kasa) = 645
+     Kullanıcı ne girdiyse çizimde ve kesim listesinde aynısını görür. */
   const elleOlculer = Array.isArray(g.bolmeOlculeri) ? g.bolmeOlculeri : [];
-  const elleToplam = elleOlculer.reduce((a, b) => a + Math.max(0, sayi(b)), 0);
-  const otoSayisi = bolmeSayisi - elleOlculer.filter((b) => sayi(b) > 0).length;
+  const eksenGirildi = Array.from({ length: bolmeSayisi }, (_, i) =>
+    Math.max(0, sayi(elleOlculer[i])));
+  const girilenSayisi = eksenGirildi.filter((b) => b > 0).length;
+
+  /* eksen ölçüsü → net açıklık */
+  const eksendenNete = (eksen, i) => {
+    const solPay = i === 0 ? p : p / 2;
+    const sagPay = i === bolmeSayisi - 1 ? p : p / 2;
+    return Math.max(0, eksen - solPay - sagPay);
+  };
 
   let bolmeGenislikleri;
-  if (otoSayisi === 0) {
-    // hepsi elle girilmiş — toplam net açıklığa oranla
-    const oran = elleToplam > 0 ? netBolmeToplam / elleToplam : 1;
-    bolmeGenislikleri = Array.from({ length: bolmeSayisi }, (_, i) =>
-      Math.max(0, sayi(elleOlculer[i]) * oran));
-    if (Math.abs(elleToplam - netBolmeToplam) > 5) {
+  if (girilenSayisi === bolmeSayisi && bolmeSayisi > 0) {
+    const eksenToplam = eksenGirildi.reduce((a, b) => a + b, 0);
+    let kullanilacak = eksenGirildi;
+
+    if (Math.abs(eksenToplam - gGen) > 2) {
+      const oran = eksenToplam > 0 ? gGen / eksenToplam : 1;
+      kullanilacak = eksenGirildi.map((b) => b * oran);
       uyarilar.push(
-        `Elle girilen bölme ölçüleri toplamı (${Math.round(elleToplam)} mm) ` +
-        `net açıklığa (${Math.round(netBolmeToplam)} mm) eşit değil, oranlandı.`
+        `Bölme ölçüleri toplamı (${Math.round(eksenToplam)} mm) toplam genişliğe ` +
+        `(${Math.round(gGen)} mm) eşit değil, oranlandı.`
       );
     }
-  } else {
-    const kalan = Math.max(0, netBolmeToplam - elleToplam);
-    const otoGen = kalan / otoSayisi;
+    bolmeGenislikleri = kullanilacak.map((e, i) => eksendenNete(e, i));
+  } else if (girilenSayisi > 0) {
+    /* kısmi giriş — girilenler eksen kabul edilir, kalan boşluk paylaştırılır */
+    const girilenNet = eksenGirildi.reduce(
+      (a, b, i) => a + (b > 0 ? eksendenNete(b, i) : 0), 0
+    );
+    const kalan = Math.max(0, netBolmeToplam - girilenNet);
+    const otoGen = kalan / Math.max(1, bolmeSayisi - girilenSayisi);
     bolmeGenislikleri = Array.from({ length: bolmeSayisi }, (_, i) =>
-      sayi(elleOlculer[i]) > 0 ? sayi(elleOlculer[i]) : otoGen);
+      eksenGirildi[i] > 0 ? eksendenNete(eksenGirildi[i], i) : otoGen);
+  } else {
+    bolmeGenislikleri = Array(bolmeSayisi).fill(netBolmeToplam / bolmeSayisi);
   }
 
   /* --- enine (yatay) kayıt --- */

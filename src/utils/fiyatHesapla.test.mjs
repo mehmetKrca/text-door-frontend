@@ -536,6 +536,89 @@ console.log('\nTEST 19 — sineklikte renk kademesi');
   dogru('sessizce sıfırlanmadı', yedekli.maliyet.cerceve > 0);
 }
 
+
+/* ============================================================
+   TEST 20 — BÖLME ÖLÇÜLERİ EKSEN BAZLIDIR
+   ============================================================
+   Kullanıcı bölme genişliği girerken EKSEN ölçüsü girer:
+   kasa dışından kayıt eksenine, kayıt ekseninden kasa dışına.
+   Girilen değerlerin toplamı toplam genişliğe eşit olmalıdır.
+
+   1500 mm, 2 bölme, p=70:
+     750 girildi → net = 750 - 70 (kasa) - 35 (yarım kayıt) = 645
+     750 girildi → net = 750 - 35 (yarım kayıt) - 70 (kasa) = 645
+   Toplam net = 1290 = icGen(1360) - dikme(70) ✓
+*/
+console.log('\nTEST 20 — bölme ölçüleri eksen bazlı');
+{
+  const yap = (olculer, bolme = 2, kanatlar = ['sabit', 'sag']) => hesapla({
+    urunTipi: 'pencere', genislik: 1500, yukseklik: 1200,
+    bolmeSayisi: bolme, kanatlar, bolmeOlculeri: olculer,
+    renk: 'beyaz', camTipi: 'klasik', profilSerisi: 70, adet: 1,
+  }, T);
+
+  /* eksen ölçüsünü net açıklıktan geri hesaplar */
+  const eksene = (net, i, n, p = 70) =>
+    Math.round(net + (i === 0 ? p : p / 2) + (i === n - 1 ? p : p / 2));
+
+  // --- simetrik ---
+  const a = yap([750, 750]);
+  esit('750/750 → net 645', a.olculer.bolmeGenislikleri[0], 645, 1);
+  esit('750/750 → net 645 (2.)', a.olculer.bolmeGenislikleri[1], 645, 1);
+  esit('eksen geri 750', eksene(a.olculer.bolmeGenislikleri[0], 0, 2), 750, 1);
+  esit('eksen geri 750 (2.)', eksene(a.olculer.bolmeGenislikleri[1], 1, 2), 750, 1);
+  dogru('simetrikte uyarı yok', a.uyarilar.length === 0);
+
+  // --- asimetrik: eski kod burada 21 mm sapıyordu ---
+  const b = yap([900, 600]);
+  esit('900/600 → net 795', b.olculer.bolmeGenislikleri[0], 795, 1);
+  esit('900/600 → net 495', b.olculer.bolmeGenislikleri[1], 495, 1);
+  esit('eksen geri 900', eksene(b.olculer.bolmeGenislikleri[0], 0, 2), 900, 1);
+  esit('eksen geri 600', eksene(b.olculer.bolmeGenislikleri[1], 1, 2), 600, 1);
+  dogru('asimetrikte uyarı yok', b.uyarilar.length === 0);
+
+  // --- 3 bölme: ortadaki iki yarım kayıt payı düşer ---
+  const c = yap([500, 500, 500], 3, ['sabit', 'sag', 'sabit']);
+  esit('3 bölme ilk net 395', c.olculer.bolmeGenislikleri[0], 395, 1);
+  esit('3 bölme orta net 430', c.olculer.bolmeGenislikleri[1], 430, 1);
+  esit('3 bölme son net 395', c.olculer.bolmeGenislikleri[2], 395, 1);
+  esit('3 bölme eksen 500', eksene(c.olculer.bolmeGenislikleri[1], 1, 3), 500, 1);
+
+  // --- toplam tutmuyorsa oranla + uyar ---
+  const d = yap([800, 800]);
+  dogru('yanlış toplamda uyarı var', d.uyarilar.some((u) => u.includes('toplam')));
+  esit('oranlanmış net 645', d.olculer.bolmeGenislikleri[0], 645, 2);
+
+  // --- hiç girilmemişse eşit böl ---
+  const e = yap([]);
+  esit('otomatik eşit böl', e.olculer.bolmeGenislikleri[0], 645, 1);
+  dogru('otomatikte uyarı yok', e.uyarilar.length === 0);
+
+  // --- net toplam her durumda doğru olmalı ---
+  [a, b, c, d, e].forEach((s, i) => {
+    const toplam = s.olculer.bolmeGenislikleri.reduce((x, y) => x + y, 0);
+    const n = s.olculer.bolmeGenislikleri.length;
+    const beklenen = s.olculer.icGenislik - (n - 1) * 70;
+    dogru(`senaryo ${i + 1} net toplamı tutuyor`, Math.abs(toplam - beklenen) < 2);
+  });
+}
+
+console.log('\nTEST 21 — lambiri sadece kullanıcı isterse');
+{
+  const yap = (urunTipi, lambiriVar) => hesapla({
+    urunTipi, genislik: 800, yukseklik: 2000, bolmeSayisi: 1,
+    kanatlar: ['sag'], renk: 'beyaz', camTipi: 'buzlu_tek',
+    profilSerisi: 70, lambiriBoyu: 800, lambiriVar, adet: 1,
+  }, T);
+
+  esit('WC kapısı lambirisiz → 0 m²', yap('wc_kapi', false).metraj.lambiriM2, 0);
+  dogru('WC kapısı lambirili → m² var', yap('wc_kapi', true).metraj.lambiriM2 > 0);
+  dogru('balkon kapısı lambirili', yap('balkonkapi', true).metraj.lambiriM2 > 0);
+  dogru('fransız balkon lambirili', yap('fransiz', true).metraj.lambiriM2 > 0);
+  esit('pencerede lambiri yok', yap('pencere', true).metraj.lambiriM2, 0);
+  esit('sürgülüde lambiri yok', yap('surgulu', true).metraj.lambiriM2, 0);
+}
+
 /* ============================================================
    ÖZET
    ============================================================ */
