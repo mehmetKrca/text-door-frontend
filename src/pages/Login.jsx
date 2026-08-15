@@ -61,14 +61,29 @@ export default function Login() {
   const [sifreGorunur, setSifreGorunur] = useState(false);
   const [beniHatirla, setBeniHatirla] = useState(false);
 
+  // Kayit formu, giris formundan tamamen ayri state'ler kullanir.
+  // Tarayicinin otomatik doldurmasi ya da giris/kayit arasi gecis
+  // iki formu birbirine karistirmasin diye.
+  const [kayitEposta, setKayitEposta] = useState('');
+  const [kayitSifre, setKayitSifre] = useState('');
+
   const [firmaAdi, setFirmaAdi] = useState('');
   const [adSoyad, setAdSoyad] = useState('');
   const [telefon, setTelefon] = useState('');
   const [paketTipi, setPaketTipi] = useState('bireysel');
+  const [paketler, setPaketler] = useState([]);
 
   const [yukleniyor, setYukleniyor] = useState(false);
   const [hata, setHata] = useState('');
   const [periyot, setPeriyot] = useState('aylik');
+
+  /* Paketleri backend'den çek — kayıtta paket_id göndermek için gerekli.
+     Başarısız olursa kayıt yine çalışır, backend varsayılan olarak Bireysel atar. */
+  useEffect(() => {
+    API.get('users/packages/')
+      .then((res) => setPaketler(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setPaketler([]));
+  }, []);
 
   // "Beni hatırla" ile kayıtlı e-postayı doldur
   useEffect(() => {
@@ -84,9 +99,22 @@ export default function Login() {
     else localStorage.removeItem('ewindoore_son_eposta');
   };
 
+  /* Seçilen paket tipine karşılık gelen backend paketini bulur.
+     Ad eşleşmesi kullanılır çünkü id'ler ortama göre değişebilir. */
+  const seciliPaket = paketler.find((p) => {
+    const ad = (p.ad || '').toLocaleLowerCase('tr');
+    return paketTipi === 'kurumsal' ? ad.includes('kurumsal') : ad.includes('bireysel');
+  });
+
   const moduDegistir = (loginMu, paket) => {
     setIsLoginModu(loginMu);
     setHata('');
+    // Giris <-> kayit gecisinde alanlar birbirine karismasin diye
+    // her iki formun state'i de temizlenir.
+    setKullaniciAdi('');
+    setSifre('');
+    setKayitEposta('');
+    setKayitSifre('');
     if (paket) setPaketTipi(paket);
     document.getElementById('giris-formu')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
@@ -144,7 +172,7 @@ export default function Login() {
   /* ---------- KAYIT ---------- */
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!firmaAdi || !adSoyad || !kullaniciAdi || !sifre) {
+    if (!firmaAdi || !adSoyad || !kayitEposta || !kayitSifre) {
       setHata("Lütfen zorunlu alanları doldurun.");
       return;
     }
@@ -152,12 +180,13 @@ export default function Login() {
     setYukleniyor(true);
     try {
       const response = await API.post('users/register/', {
-        username: kullaniciAdi,
-        email: kullaniciAdi,
-        password: sifre,
+        username: kayitEposta,
+        email: kayitEposta,
+        password: kayitSifre,
         firma_adi: firmaAdi,
         ad_soyad: adSoyad,
-        telefon: telefon
+        telefon: telefon,
+        paket_id: seciliPaket?.id ?? null,
       });
       if (response.data.access) {
         await giris(response.data.access, response.data.refresh);
@@ -390,6 +419,42 @@ export default function Login() {
 
         .ew-legal { margin-top: 16px; font-size: 11.8px; line-height: 1.55; color: var(--faint); text-align: center; }
         .ew-legal a { color: var(--muted); }
+
+
+        /* ---------- PAKET SEÇİMİ (kayıt formu) ---------- */
+        .ew-paket-sec { margin-bottom: 16px; }
+        .ew-paket-sec-lbl {
+          display:block; font-size:12.5px; font-weight:600;
+          color:var(--ink-2); margin-bottom:7px;
+        }
+        .ew-paket-kutu { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+        .ew-paket-k {
+          position:relative; text-align:left; cursor:pointer;
+          padding:12px 12px 11px; border-radius:10px;
+          background:#fff; border:1.5px solid var(--line-2);
+          font-family:inherit; transition:border-color .15s, background .15s;
+        }
+        .ew-paket-k:hover { border-color:var(--blue); }
+        .ew-paket-k.on { border-color:var(--blue); background:var(--blue-soft); }
+        .ew-paket-k-ad { font-size:13.5px; font-weight:700; color:var(--ink); }
+        .ew-paket-k-f {
+          font-size:16px; font-weight:800; color:var(--blue); margin:3px 0 2px;
+          font-family:'JetBrains Mono', monospace;
+        }
+        .ew-paket-k-f span { font-size:11px; font-weight:500; color:var(--faint); }
+        .ew-paket-k-not { font-size:11.5px; color:var(--muted); line-height:1.4; }
+        .ew-paket-k-tik {
+          position:absolute; top:9px; right:9px;
+          width:16px; height:16px; border-radius:50%;
+          border:1.5px solid var(--line-2); background:#fff;
+        }
+        .ew-paket-k.on .ew-paket-k-tik {
+          border-color:var(--blue); background:var(--blue);
+          display:grid; place-items:center;
+        }
+        .ew-paket-uyari {
+          font-size:11.5px; color:var(--faint); margin-top:6px; line-height:1.45;
+        }
 
         /* ---------- BÖLÜM ORTAK ---------- */
         .ew-sec { padding: 66px 0; }
@@ -747,14 +812,14 @@ export default function Login() {
               <button
                 type="button"
                 className={`ew-tab ${isLoginModu ? 'is-on' : ''}`}
-                onClick={() => setIsLoginModu(true)}
+                onClick={() => moduDegistir(true)}
               >
                 Giriş Yap
               </button>
               <button
                 type="button"
                 className={`ew-tab ${!isLoginModu ? 'is-on' : ''}`}
-                onClick={() => setIsLoginModu(false)}
+                onClick={() => moduDegistir(false)}
               >
                 Kayıt Ol
               </button>
@@ -783,12 +848,65 @@ export default function Login() {
             <form onSubmit={isLoginModu ? handleLogin : handleRegister}>
               {!isLoginModu && (
                 <>
+                  <div className="ew-paket-sec">
+                    <label className="ew-paket-sec-lbl">Paket Seçimi</label>
+                    <div className="ew-paket-kutu">
+                      <button
+                        type="button"
+                        className={`ew-paket-k ${paketTipi === 'bireysel' ? 'on' : ''}`}
+                        onClick={() => setPaketTipi('bireysel')}
+                      >
+                        <span className="ew-paket-k-tik">
+                          {paketTipi === 'bireysel' && (
+                            <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+                              <path d="M1.5 5.2l2.3 2.3L8.5 2.8" stroke="#fff"
+                                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </span>
+                        <span className="ew-paket-k-ad" style={{ display: 'block' }}>Bireysel</span>
+                        <span className="ew-paket-k-f" style={{ display: 'block' }}>
+                          250 <span>₺/ay</span>
+                        </span>
+                        <span className="ew-paket-k-not" style={{ display: 'block' }}>
+                          Tek kullanıcı
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`ew-paket-k ${paketTipi === 'kurumsal' ? 'on' : ''}`}
+                        onClick={() => setPaketTipi('kurumsal')}
+                      >
+                        <span className="ew-paket-k-tik">
+                          {paketTipi === 'kurumsal' && (
+                            <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+                              <path d="M1.5 5.2l2.3 2.3L8.5 2.8" stroke="#fff"
+                                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </span>
+                        <span className="ew-paket-k-ad" style={{ display: 'block' }}>Kurumsal</span>
+                        <span className="ew-paket-k-f" style={{ display: 'block' }}>
+                          500 <span>₺/ay</span>
+                        </span>
+                        <span className="ew-paket-k-not" style={{ display: 'block' }}>
+                          Sınırsız kullanıcı
+                        </span>
+                      </button>
+                    </div>
+                    <div className="ew-paket-uyari">
+                      14 gün boyunca ücretsiz. Paketinizi daha sonra profil
+                      ekranından değiştirebilirsiniz.
+                    </div>
+                  </div>
+
                   <div className="ew-f">
                     <label className="ew-lbl">Firma / Atölye Adı</label>
                     <input
                       className="ew-in" type="text" value={firmaAdi}
                       onChange={(e) => setFirmaAdi(e.target.value)}
-                      placeholder="Firma / Atölye adınız" autoComplete="organization"
+                      placeholder="Örn: Koçak Yapı" autoComplete="off"
                     />
                   </div>
                   <div className="ew-f ew-row2">
@@ -797,7 +915,7 @@ export default function Login() {
                       <input
                         className="ew-in" type="text" value={adSoyad}
                         onChange={(e) => setAdSoyad(e.target.value)}
-                        placeholder="Mehmet Yılmaz" autoComplete="name"
+                        placeholder="Mehmet Yılmaz" autoComplete="off"
                       />
                     </div>
                     <div>
@@ -805,50 +923,84 @@ export default function Login() {
                       <input
                         className="ew-in" type="tel" inputMode="numeric" value={telefon}
                         onChange={(e) => setTelefon(e.target.value)}
-                        placeholder="0555 000 00 00" autoComplete="tel"
+                        placeholder="0555 000 00 00" autoComplete="off"
                       />
+                    </div>
+                  </div>
+
+                  <div className="ew-f">
+                    <label className="ew-lbl">E-posta</label>
+                    <input
+                      className="ew-in" type="email" value={kayitEposta}
+                      onChange={(e) => setKayitEposta(e.target.value)}
+                      placeholder="ornek@firma.com" autoComplete="off"
+                    />
+                  </div>
+
+                  <div className="ew-f">
+                    <label className="ew-lbl">Şifre</label>
+                    <div className="ew-inbox">
+                      <input
+                        className="ew-in has-eye"
+                        type={sifreGorunur ? 'text' : 'password'}
+                        value={kayitSifre}
+                        onChange={(e) => setKayitSifre(e.target.value)}
+                        placeholder="••••••••"
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button" className="ew-eye"
+                        onClick={() => setSifreGorunur(!sifreGorunur)}
+                        aria-label={sifreGorunur ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                          <path d="M2 9s2.7-4.5 7-4.5S16 9 16 9s-2.7 4.5-7 4.5S2 9 2 9z" stroke="currentColor" strokeWidth="1.3" />
+                          <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="1.3" />
+                          {sifreGorunur && <line x1="3" y1="15" x2="15" y2="3" stroke="currentColor" strokeWidth="1.3" />}
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </>
               )}
 
-              <div className="ew-f">
-                <label className="ew-lbl">E-posta</label>
-                <input
-                  className="ew-in" type={isLoginModu ? 'text' : 'email'} value={kullaniciAdi}
-                  onChange={(e) => setKullaniciAdi(e.target.value)}
-                  placeholder={isLoginModu ? 'E-posta veya kullanıcı adı' : 'ornek@firma.com'}
-                  autoComplete="email"
-                />
-              </div>
-
-              <div className="ew-f">
-                <label className="ew-lbl">Şifre</label>
-                <div className="ew-inbox">
-                  <input
-                    className="ew-in has-eye"
-                    type={sifreGorunur ? 'text' : 'password'}
-                    value={sifre}
-                    onChange={(e) => setSifre(e.target.value)}
-                    placeholder="••••••••"
-                    autoComplete={isLoginModu ? 'current-password' : 'new-password'}
-                  />
-                  <button
-                    type="button" className="ew-eye"
-                    onClick={() => setSifreGorunur(!sifreGorunur)}
-                    aria-label={sifreGorunur ? 'Şifreyi gizle' : 'Şifreyi göster'}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                      <path d="M2 9s2.7-4.5 7-4.5S16 9 16 9s-2.7 4.5-7 4.5S2 9 2 9z" stroke="currentColor" strokeWidth="1.3" />
-                      <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="1.3" />
-                      {sifreGorunur && <line x1="3" y1="15" x2="15" y2="3" stroke="currentColor" strokeWidth="1.3" />}
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
               {isLoginModu && (
-                <div className="ew-alt-row">
+                <>
+                  <div className="ew-f">
+                    <label className="ew-lbl">E-posta</label>
+                    <input
+                      className="ew-in" type="email" value={kullaniciAdi}
+                      onChange={(e) => setKullaniciAdi(e.target.value)}
+                      placeholder="ornek@firma.com" autoComplete="email"
+                    />
+                  </div>
+
+                  <div className="ew-f">
+                    <label className="ew-lbl">Şifre</label>
+                    <div className="ew-inbox">
+                      <input
+                        className="ew-in has-eye"
+                        type={sifreGorunur ? 'text' : 'password'}
+                        value={sifre}
+                        onChange={(e) => setSifre(e.target.value)}
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button" className="ew-eye"
+                        onClick={() => setSifreGorunur(!sifreGorunur)}
+                        aria-label={sifreGorunur ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                          <path d="M2 9s2.7-4.5 7-4.5S16 9 16 9s-2.7 4.5-7 4.5S2 9 2 9z" stroke="currentColor" strokeWidth="1.3" />
+                          <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="1.3" />
+                          {sifreGorunur && <line x1="3" y1="15" x2="15" y2="3" stroke="currentColor" strokeWidth="1.3" />}
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="ew-alt-row">
                   <label className="ew-check">
                     <input
                       type="checkbox" checked={beniHatirla}
@@ -862,7 +1014,8 @@ export default function Login() {
                   >
                     Şifremi unuttum?
                   </button>
-                </div>
+                  </div>
+                </>
               )}
 
               <button type="submit" className="ew-btn ew-btn-p" disabled={yukleniyor}>
@@ -1208,7 +1361,7 @@ export default function Login() {
           <div className="ew-foot-links">
             <a href="/kullanici-sozlesmesi">Kullanıcı Sözleşmesi</a>
             <a href="/gizlilik-sozlesmesi">Gizlilik Politikası</a>
-            <a href="/hesap-silme">Hesap Silme Talebi</a>
+            <a href="/gizlilik-sozlesmesi#hesap-silme">Hesap Silme Talebi</a>
             <button className="ew-nav-link" style={{ color: '#cbd5e4', fontSize: '13.5px' }} onClick={() => kaydir('fiyatlar')}>
               Fiyatlar
             </button>
