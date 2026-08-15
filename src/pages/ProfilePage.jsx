@@ -61,6 +61,7 @@ export default function ProfilePage() {
 
   /* ---------- şirket ayarları (localStorage) ---------- */
   const [firmaLogosu, setFirmaLogosu] = useState(() => localStorage.getItem('ustaFirmaLogosu') || '');
+  const [logoYukleniyor, setLogoYukleniyor] = useState(false);
   const [iban, setIban] = useState(() => localStorage.getItem('ustaKurumsalIban') || '');
   const [profilSerisi, setProfilSerisi] = useState(() => Number(localStorage.getItem('ustaProfilSerisi')) || 70);
 
@@ -218,20 +219,79 @@ export default function ProfilePage() {
   };
 
   /* ---------- şirket ayarları ---------- */
-  const logoSec = (e) => {
+  const MAKS_LOGO_KENAR = 400;
+  const HEDEF_LOGO_BOYUTU = 300 * 1024; // 300 KB
+
+  const gorselYukle = (dosya) => new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(dosya);
+    const gorsel = new Image();
+    gorsel.onload = () => { URL.revokeObjectURL(url); resolve(gorsel); };
+    gorsel.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Görsel okunamadı.')); };
+    gorsel.src = url;
+  });
+
+  // data URL'nin yaklasik byte boyutu (base64 -> ikili donusum orani ~%75)
+  const dataUrlBoyutu = (veri) => Math.ceil((veri.length - veri.indexOf(',') - 1) * 0.75);
+
+  const logoSec = async (e) => {
     const dosya = e.target.files?.[0];
+    e.target.value = ''; // ayni dosya tekrar secilebilsin
     if (!dosya) return;
-    if (dosya.size > 500 * 1024) {
-      return bildir('hata', 'Logo 500 KB\'dan küçük olmalı.');
+
+    if (dosya.size > 10 * 1024 * 1024) {
+      return bildir('hata', "Logo 10 MB'dan büyük olamaz. Lütfen daha küçük bir görsel seçin.");
     }
-    const okuyucu = new FileReader();
-    okuyucu.onload = () => {
-      const veri = okuyucu.result;
+
+    setLogoYukleniyor(true);
+    try {
+      const gorsel = await gorselYukle(dosya);
+
+      let genislik = gorsel.naturalWidth || gorsel.width;
+      let yukseklik = gorsel.naturalHeight || gorsel.height;
+      if (genislik > MAKS_LOGO_KENAR || yukseklik > MAKS_LOGO_KENAR) {
+        const oran = Math.min(MAKS_LOGO_KENAR / genislik, MAKS_LOGO_KENAR / yukseklik);
+        genislik = Math.max(1, Math.round(genislik * oran));
+        yukseklik = Math.max(1, Math.round(yukseklik * oran));
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = genislik;
+      canvas.height = yukseklik;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(gorsel, 0, 0, genislik, yukseklik);
+
+      // seffaflik var mi kontrol et (varsa PNG olarak kalsin)
+      let seffafVar = false;
+      try {
+        const { data } = ctx.getImageData(0, 0, genislik, yukseklik);
+        for (let i = 3; i < data.length; i += 4) {
+          if (data[i] < 255) { seffafVar = true; break; }
+        }
+      } catch {
+        // getImageData basarisiz olursa (ör. guvenlik kisiti) orijinal tipe guven
+        seffafVar = dosya.type === 'image/png';
+      }
+
+      let veri;
+      if (seffafVar) {
+        veri = canvas.toDataURL('image/png');
+      } else {
+        let kalite = 0.82;
+        veri = canvas.toDataURL('image/jpeg', kalite);
+        while (dataUrlBoyutu(veri) > HEDEF_LOGO_BOYUTU && kalite > 0.3) {
+          kalite -= 0.1;
+          veri = canvas.toDataURL('image/jpeg', kalite);
+        }
+      }
+
       setFirmaLogosu(veri);
       localStorage.setItem('ustaFirmaLogosu', veri);
       bildir('ok', 'Logo kaydedildi.');
-    };
-    okuyucu.readAsDataURL(dosya);
+    } catch (hata) {
+      bildir('hata', 'Logo işlenemedi. Lütfen başka bir görsel deneyin.');
+    } finally {
+      setLogoYukleniyor(false);
+    }
   };
 
   const sirketKaydet = () => {
@@ -704,13 +764,15 @@ export default function ProfilePage() {
             <div className="pf-f">
               <label className="pf-lbl">Firma Logosu</label>
               <div className="pf-logo-on">
-                {firmaLogosu
-                  ? <img src={firmaLogosu} alt="Logo" />
-                  : <span className="pf-logo-bos">Logo yüklenmedi</span>}
+                {logoYukleniyor
+                  ? <span className="pf-logo-bos">Yükleniyor...</span>
+                  : firmaLogosu
+                    ? <img src={firmaLogosu} alt="Logo" />
+                    : <span className="pf-logo-bos">Logo yüklenmedi</span>}
               </div>
-              <input className="pf-in" type="file" accept="image/*" onChange={logoSec} />
+              <input className="pf-in" type="file" accept="image/*" onChange={logoSec} disabled={logoYukleniyor} />
               <div className="pf-ipucu">
-                Teklif PDF'inin üst kısmında görünür. En fazla 500 KB, PNG veya JPG.
+                Teklif PDF'inin üst kısmında görünür. Seçtiğiniz görsel otomatik olarak küçültülür.
               </div>
             </div>
             <div className="pf-f">
