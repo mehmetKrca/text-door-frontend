@@ -98,7 +98,7 @@ export function hesapla(g, t) {
 
   /* --- enine (yatay) kayıt --- */
   const lambiriIzinliUrunler = ['kapi', 'wc_kapi', 'balkonkapi', 'fransiz'];
-  const lambiriVar = lambiriIzinliUrunler.includes(urunTipi) && (urunTipi === 'wc_kapi' || !!g.lambiriVar);
+  const lambiriVar = lambiriIzinliUrunler.includes(urunTipi) && !!g.lambiriVar;
   const enineIstendi = !!g.enineBolmeVar || lambiriVar;
 
   // kayıt ekseninin zeminden yüksekliği
