@@ -97,7 +97,10 @@ export default function PvcCizimEkrani() {
   const [sepet, setSepet] = useState([]);
   const [kalemAdi, setKalemAdi] = useState('');
   const [duzenlenenKalemId, setDuzenlenenKalemId] = useState(null);
-  
+  // Arsivden yuklenen projenin id'si. Doluysa "Arsive Kaydet" mevcut kaydi
+  // guncellemeli, bos ise yeni kayit olusturmali (mukerrer kayit fix'i).
+  const [duzenlenenProjeId, setDuzenlenenProjeId] = useState(null);
+
   const [pvcEklendi, setPvcEklendi] = useState(false);
   const [spEklendi, setSpEklendi] = useState(false);
 
@@ -449,6 +452,14 @@ export default function PvcCizimEkrani() {
     if (!projeAdi.trim()) { alert("Lütfen kaydetmeden önce Müşteri veya Proje Adı giriniz."); return; }
     if (sepet.length === 0) { alert("Projeye henüz ürün eklemediniz."); return; }
 
+    if (duzenlenenProjeId) {
+      const onay = window.confirm(
+        "Bu proje arşivde zaten var. Yeni kayıt oluşturmak istediğinizden emin misiniz?\n\n" +
+        "(Tamam = Yeni Kayıt Oluştur, İptal = Vazgeç)"
+      );
+      if (!onay) return;
+    }
+
     const guncelToplam = Math.ceil(sepetGenelToplam);
     const geciciId = Date.now();
 
@@ -475,7 +486,7 @@ export default function PvcCizimEkrani() {
     }
 
     alert(`"${projeAdi}" Müşteri Arşivi'ne başarıyla eklendi! 🚀`);
-    setProjeAdi(''); setMusteriTel(''); setMusteriAdres(''); setSiparisNotu(''); setSepet([]); handleSekmeDegistir('arsiv'); 
+    setProjeAdi(''); setMusteriTel(''); setMusteriAdres(''); setSiparisNotu(''); setSepet([]); setDuzenlenenProjeId(null); handleSekmeDegistir('arsiv');
   };
 
   const handleDurumGuncelle = async (id, yeniDurum) => {
@@ -512,7 +523,7 @@ export default function PvcCizimEkrani() {
   };
 
   const handleArsivdenYukle = (arsivProjesi) => {
-    setProjeAdi(arsivProjesi.projeAdi || ''); setMusteriTel(arsivProjesi.musteriTel || ''); setMusteriAdres(arsivProjesi.musteriAdres || ''); setSiparisNotu(arsivProjesi.siparisNotu || ''); setTeklifTarihi(arsivProjesi.teklifTarihi || new Date().toLocaleDateString('tr-TR')); setSepet(arsivProjesi.sepet || []); handleSekmeDegistir('sepet');
+    setProjeAdi(arsivProjesi.projeAdi || ''); setMusteriTel(arsivProjesi.musteriTel || ''); setMusteriAdres(arsivProjesi.musteriAdres || ''); setSiparisNotu(arsivProjesi.siparisNotu || ''); setTeklifTarihi(arsivProjesi.teklifTarihi || new Date().toLocaleDateString('tr-TR')); setSepet(arsivProjesi.sepet || []); setDuzenlenenProjeId(arsivProjesi.id ?? null); handleSekmeDegistir('sepet');
   };
 
   const handleArsivdenSil = async (id) => {
@@ -529,7 +540,7 @@ export default function PvcCizimEkrani() {
     }
   };
 
-  const handleYeniProje = () => { setProjeAdi(''); setMusteriTel(''); setMusteriAdres(''); setSiparisNotu(''); setSepet([]); setKalemAdi(''); setDuzenlenenKalemId(null); };
+  const handleYeniProje = () => { setProjeAdi(''); setMusteriTel(''); setMusteriAdres(''); setSiparisNotu(''); setSepet([]); setKalemAdi(''); setDuzenlenenKalemId(null); setDuzenlenenProjeId(null); };
 
   const PROJE_ALAN_SETTERLARI = { ad: setProjeAdi, tel: setMusteriTel, tarih: setTeklifTarihi, adres: setMusteriAdres, not: setSiparisNotu };
   const handleProjeAlanDegistir = (alan, deger) => PROJE_ALAN_SETTERLARI[alan]?.(deger);
