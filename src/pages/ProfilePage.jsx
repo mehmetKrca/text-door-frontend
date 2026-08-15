@@ -29,8 +29,11 @@ export default function ProfilePage() {
     adSoyad: '', eposta: '', telefon: '', firmaAdi: '',
   });
 
+  // Ust kisimdaki 3 istatistik karti (proje/cizim/teklif) kaldirildi - bu sayilar
+  // artik Patron Ozeti'nde gosteriliyor. proje_sayisi/cizim_sayisi/calisan_sayisi
+  // hala Hesabi Sil uyarisinda ve Ekip Yonetimi'nde kullanildigi icin state korunuyor.
   const [istatistik, setIstatistik] = useState({
-    proje_sayisi: 0, cizim_sayisi: 0, teklif_sayisi: 0, calisan_sayisi: 0,
+    proje_sayisi: 0, cizim_sayisi: 0, calisan_sayisi: 0,
   });
 
   const [abonelik, setAbonelik] = useState({
@@ -561,22 +564,6 @@ export default function ProfilePage() {
               <span className={`pf-etiket ${dondurulmus ? 'don' : (abonelik.deneme_doldu_mu ? 'uyari' : '')}`}>
                 {dondurulmus ? '❄ Hesap Donduruldu' : paketEtiketi}
               </span>
-            </div>
-
-            {/* ---------- İSTATİSTİK ---------- */}
-            <div className="pf-stat">
-              <div className="pf-stat-h">
-                <div className="pf-stat-n">{istatistik.proje_sayisi}</div>
-                <div className="pf-stat-t">Proje</div>
-              </div>
-              <div className="pf-stat-h">
-                <div className="pf-stat-n">{istatistik.cizim_sayisi}</div>
-                <div className="pf-stat-t">Çizim</div>
-              </div>
-              <div className="pf-stat-h">
-                <div className="pf-stat-n">{istatistik.teklif_sayisi}</div>
-                <div className="pf-stat-t">Teklif</div>
-              </div>
             </div>
 
             {/* ---------- HESAP ---------- */}
