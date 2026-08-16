@@ -40,6 +40,7 @@ export default function ProfilePage() {
   const [abonelik, setAbonelik] = useState({
     kalan_deneme_gunu: null, abonelik_aktif: false, deneme_doldu_mu: false,
     abonelik_baslangic: null, abonelik_bitis: null, paket_adi: null,
+    abonelik_periyot: null,   // 'aylik' | 'yillik' | 'tek_seferlik' | null
   });
 
   const [profilKaydediliyor, setProfilKaydediliyor] = useState(false);
@@ -357,6 +358,21 @@ export default function ProfilePage() {
   const paketEtiketi = abonelik.abonelik_aktif
     ? (patronMu ? 'Kurumsal Üye' : 'Ekip Üyesi')
     : (abonelik.deneme_doldu_mu ? 'Deneme Bitti' : `Deneme · ${abonelik.kalan_deneme_gunu ?? 14} gün`);
+
+  // Backend abonelik_periyot degerleri (aylik/yillik/tek_seferlik) ile paket
+  // tablosundaki periyotKey (aylik/yillik/tek) aynı sozlukte degil, bu yuzden ayri.
+  const PERIYOT_BACKEND_ETIKET = { aylik: 'Aylık', yillik: 'Yıllık', tek_seferlik: 'Tek Seferlik' };
+
+  const periyotEslesir = (periyotKey, backendPeriyot) => {
+    if (!backendPeriyot) return false;
+    if (backendPeriyot === 'tek_seferlik') return periyotKey === 'tek';
+    return periyotKey === backendPeriyot;
+  };
+
+  const mevcutPaketMi = (paket, periyotKey) =>
+    abonelik.abonelik_aktif
+    && abonelik.paket_adi === paket.ad
+    && periyotEslesir(periyotKey, abonelik.abonelik_periyot);
 
   const tarihFormatla = (deger) => {
     if (!deger) return '—';
@@ -904,6 +920,22 @@ export default function ProfilePage() {
 
         ) : gorunum === 'abonelik' ? (
           <div className="pf-form">
+            {abonelik.abonelik_aktif && (
+              <div style={{ background: '#e9f7ef', border: '1px solid #b7e4c7', borderRadius: 8, padding: '12px 16px' }}>
+                {abonelik.abonelik_periyot ? (
+                  <>
+                    <div style={{ fontWeight: 700, color: '#15803d', fontSize: 15 }}>
+                      {abonelik.paket_adi} - {PERIYOT_BACKEND_ETIKET[abonelik.abonelik_periyot] || abonelik.abonelik_periyot} Abone
+                    </div>
+                    <div style={{ fontSize: 13, color: '#15803d', marginTop: 4 }}>
+                      Aboneliğiniz {tarihFormatla(abonelik.abonelik_bitis)} tarihine kadar geçerli.
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontWeight: 700, color: '#15803d', fontSize: 15 }}>Aboneliğiniz aktif</div>
+                )}
+              </div>
+            )}
             <div className="pf-f">
               <label className="pf-lbl">Mevcut Durum</label>
               <div style={{ fontSize: 17, fontWeight: 700 }}>
@@ -949,19 +981,24 @@ export default function ProfilePage() {
                     {PAKETLER.flatMap((paket) =>
                       Object.keys(PERIYOT_ETIKETLERI).map((periyotKey) => {
                         const fiyat = paket.fiyat[periyotKey];
+                        const mevcut = mevcutPaketMi(paket, periyotKey);
                         return (
-                          <tr key={`${paket.id}-${periyotKey}`}>
+                          <tr key={`${paket.id}-${periyotKey}`} style={mevcut ? { backgroundColor: '#e9f7ef' } : undefined}>
                             <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--line, #eef2f7)', fontWeight: 600 }}>{paket.ad}</td>
                             <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--line, #eef2f7)' }}>{PERIYOT_ETIKETLERI[periyotKey]}</td>
                             <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--line, #eef2f7)', whiteSpace: 'nowrap' }}>{fiyat.tutar} ₺ {fiyat.birim}</td>
                             <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--line, #eef2f7)' }}>
-                              <button
-                                className="pf-btn pf-btn-o"
-                                style={{ padding: '6px 12px', fontSize: 12.5, whiteSpace: 'nowrap' }}
-                                onClick={() => aboneOlWhatsapp(paket, periyotKey)}
-                              >
-                                Abone Ol
-                              </button>
+                              {mevcut ? (
+                                <span style={{ fontWeight: 600, color: '#15803d', fontSize: 12.5, whiteSpace: 'nowrap' }}>Mevcut Paketiniz</span>
+                              ) : (
+                                <button
+                                  className="pf-btn pf-btn-o"
+                                  style={{ padding: '6px 12px', fontSize: 12.5, whiteSpace: 'nowrap' }}
+                                  onClick={() => aboneOlWhatsapp(paket, periyotKey)}
+                                >
+                                  {abonelik.abonelik_aktif ? 'Bu Pakete Geç' : 'Abone Ol'}
+                                </button>
+                              )}
                             </td>
                           </tr>
                         );
