@@ -41,6 +41,7 @@ export default function ProfilePage() {
     kalan_deneme_gunu: null, abonelik_aktif: false, deneme_doldu_mu: false,
     abonelik_baslangic: null, abonelik_bitis: null, paket_adi: null,
     abonelik_periyot: null,   // 'aylik' | 'yillik' | 'tek_seferlik' | null
+    omur_boyu: false,
   });
 
   const [profilKaydediliyor, setProfilKaydediliyor] = useState(false);
@@ -928,7 +929,9 @@ export default function ProfilePage() {
                       {abonelik.paket_adi} - {PERIYOT_BACKEND_ETIKET[abonelik.abonelik_periyot] || abonelik.abonelik_periyot} Abone
                     </div>
                     <div style={{ fontSize: 13, color: '#15803d', marginTop: 4 }}>
-                      Aboneliğiniz {tarihFormatla(abonelik.abonelik_bitis)} tarihine kadar geçerli.
+                      {abonelik.omur_boyu
+                        ? 'Ömür boyu erişiminiz var.'
+                        : `Aboneliğiniz ${tarihFormatla(abonelik.abonelik_bitis)} tarihine kadar geçerli.`}
                     </div>
                   </>
                 ) : (
@@ -955,7 +958,9 @@ export default function ProfilePage() {
                   <div><strong>Deneme Kalan Gün:</strong> {abonelik.deneme_doldu_mu ? 0 : (abonelik.kalan_deneme_gunu ?? 14)}</div>
                 )}
                 <div><strong>Abonelik Başlangıç:</strong> {tarihFormatla(abonelik.abonelik_baslangic)}</div>
-                <div><strong>Abonelik Bitiş:</strong> {tarihFormatla(abonelik.abonelik_bitis)}</div>
+                {!abonelik.omur_boyu && (
+                  <div><strong>Abonelik Bitiş:</strong> {tarihFormatla(abonelik.abonelik_bitis)}</div>
+                )}
               </div>
               {!abonelik.abonelik_aktif && !abonelik.deneme_doldu_mu && (
                 <div className="pf-ipucu">
