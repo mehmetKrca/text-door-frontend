@@ -77,10 +77,18 @@ export default function DogramaCizim({
     const X = (olcuGoster ? 96 : 20) + (alanW - W) / 2;
     const Y = (olcuGoster ? 32 : 20) + (alanH - Hmax) / 2;
 
+    /* ⚠️ Profil kalınlıkları fiyat motoruyla BİREBİR AYNI olmalı.
+       Motor (fiyatHesapla.js) üçünü de profilSerisi (p) kabul ediyor:
+         kasa   → icGen = gGen - 2p
+         kayıt  → dikmeToplamGenislik = dikmeSayisi * p
+         kanat  → icPay = p
+       Burada farklı bir çarpan kullanılırsa çizimdeki ara ölçüler ile
+       kesim listesi birbirini tutmaz. Daha önce kanat 1.06p, kayıt 1.28p
+       alınıyordu ve eksen ölçülerinde 10 mm sapmaya yol açıyordu. */
     const p = Math.max(30, Number(profilSerisi) || 70);
     const kasa = Math.max(6, p * olcek);
-    const kanat = Math.max(5, p * 1.06 * olcek);
-    const kayit = Math.max(6, p * 1.28 * olcek);
+    const kanat = Math.max(5, p * olcek);
+    const kayit = Math.max(6, p * olcek);
     const cita = Math.max(2, 16 * olcek);
     const conta = Math.max(1.2, 6 * olcek);
 
