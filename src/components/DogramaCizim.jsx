@@ -90,6 +90,7 @@ export default function DogramaCizim({
     const kanat = Math.max(5, pay.kanatCamPayi * olcek);
     const kayit = Math.max(6, pay.kayitGenisligi * olcek);
     const cita = Math.max(2, pay.sabitCamPayi * olcek);
+    const kanatBoy = Math.max(5, pay.kanatCamPayiBoy * olcek);
     const conta = Math.max(1.2, 6 * olcek);
 
     // üst kenar eğimli olabilir (açılı pencere)
@@ -172,7 +173,7 @@ export default function DogramaCizim({
     return {
       TW, TH, olcek, mmEn, mmSol, mmSag, mmMax,
       W, Hsol, Hsag, Hmax, X, Y, alt, ustSol, ustSag, ustY,
-      kasa, kanat, kayit, cita,
+      kasa, kanat, kayit, cita, kanatBoy,
       icX, icSag, icAlt, icW, n, bolmeler,
       enineAktif, eksenY, p, pay,
     };

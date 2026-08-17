@@ -49,7 +49,8 @@ export function hesapla(g, t) {
   const pay = profilPaylariAl(g.profilSerisi, t);
   const kasaPayi = pay.kasaPayi;          // dış ölçüden her kenardan
   const kayitGen = pay.kayitGenisligi;    // orta kayıt görünen genişliği
-  const kanatCamPayi = pay.kanatCamPayi;  // açılan bölmede her kenardan
+  const kanatCamPayi = pay.kanatCamPayi;        // açılan bölme, YAN kenarlar
+  const kanatCamPayiBoy = pay.kanatCamPayiBoy;  // açılan bölme, ÜST/ALT
   const sabitCamPayi = pay.sabitCamPayi;  // sabit bölmede her kenardan
   const p = kasaPayi;                     // geriye dönük uyumluluk
   const adet = Math.max(1, Math.floor(sayi(g.adet, 1)));
@@ -203,10 +204,12 @@ export function hesapla(g, t) {
       }
 
       /* Açılan bölmede kanat profili + cam çıtası, sabit bölmede yalnız
-         çıta payı düşülür. Değerler profil serisinin ayarlarından gelir. */
-      const icPay = acilirMi ? kanatCamPayi : sabitCamPayi;
-      const camW = Math.max(0, bg - 2 * icPay);
-      const camH = Math.max(0, yuk - 2 * icPay);
+         çıta payı düşülür. Kanatta EN ve BOY payları farklıdır: alt ray
+         su tahliye kanalı yüzünden yan kenarlardan geniştir. */
+      const icPayEn = acilirMi ? kanatCamPayi : sabitCamPayi;
+      const icPayBoy = acilirMi ? kanatCamPayiBoy : sabitCamPayi;
+      const camW = Math.max(0, bg - 2 * icPayEn);
+      const camH = Math.max(0, yuk - 2 * icPayBoy);
 
       camM2 += (camW * camH) / 1e6;
       camParcalari.push({

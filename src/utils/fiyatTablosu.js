@@ -39,21 +39,36 @@ export const renkKademesi = (renkId) =>
 
      kasaPayi       : dış ölçüden HER KENARDAN düşülen kasa payı
      kayitGenisligi : orta kayıt (dikme) toplam görünen genişliği
-     kanatCamPayi   : AÇILAN bölmede net açıklıktan her kenardan düşülen
-                      pay (kanat profili + cam çıtası birlikte)
+     kanatCamPayi   : AÇILAN bölmede YAN kenarlardan düşülen pay
+                      (kanat profili + cam çıtası) — EN hesabında kullanılır
+     kanatCamPayiBoy: AÇILAN bölmede ÜST/ALT kenarlardan düşülen pay —
+                      BOY hesabında kullanılır. Genelde yan kenarlardan
+                      büyüktür çünkü kanadın alt rayı su tahliye kanalı
+                      yüzünden daha geniş yapılır.
      sabitCamPayi   : SABİT bölmede her kenardan düşülen pay (yalnız çıta)
 
-   70'lik seri değerleri gerçek bir pencere ölçüsüyle doğrulandı:
-     1120×1480, eksen 700/420 → açılır cam 485, sabit cam 270 ✓
-   60 ve 80'lik seriler tahminidir, firma kendi profiliyle doğrulamalı.
+   ÖNEMLİ AYRIM — sabit cam ile kanat camı bambaşka çalışır:
+     · SABİT bölmede cam doğrudan kasa/kayıt yuvasına oturur, çıta onu
+       önden tutar. Bu yüzden pay çok küçüktür (~5 mm).
+     · AÇILAN bölmede cam kanat profilinin İÇİNDE durur. Kanadın kendi
+       genişliği devreye girer, pay büyüktür (~48 mm).
+
+   70'lik seri gerçek bir pencereden ölçülerek kalibre edildi
+   (çıta sökülü, kanat ve cam ayrı ayrı ölçüldü):
+     Dış 1210×1380 · kanat dış 540×1310 · kanat camı 455×1200
+     → kasaPayi 35 · kanatCamPayi 48 · kayitGenisligi 65 · sabitCamPayi 5
+
+   60 ve 80'lik seriler bundan oranlanmıştır. Profili farklı olan firma
+   Fiyat Ayarları → Profil Kalibrasyonu ile 5 dakikada kendi değerlerini
+   hesaplatabilir.
    ============================================================ */
 
 export const PROFIL_SERILERI = [60, 70, 80];
 
 export const VARSAYILAN_PROFIL_PAYLARI = {
-  60: { kasaPayi: 55, kayitGenisligi: 72, kanatCamPayi: 53, sabitCamPayi: 23 },
-  70: { kasaPayi: 60, kayitGenisligi: 80, kanatCamPayi: 57.5, sabitCamPayi: 25 },
-  80: { kasaPayi: 66, kayitGenisligi: 88, kanatCamPayi: 63, sabitCamPayi: 27 },
+  60: { kasaPayi: 32, kayitGenisligi: 60, kanatCamPayi: 39, kanatCamPayiBoy: 50, sabitCamPayi: 5 },
+  70: { kasaPayi: 35, kayitGenisligi: 65, kanatCamPayi: 42.5, kanatCamPayiBoy: 55, sabitCamPayi: 5 },
+  80: { kasaPayi: 40, kayitGenisligi: 72, kanatCamPayi: 47, kanatCamPayiBoy: 61, sabitCamPayi: 5 },
 };
 
 /** Seri numarasını güvenli hale getirir — 60/70/80 dışındaki değer 70 sayılır */
@@ -83,8 +98,126 @@ export function profilPaylariAl(seri, tablo) {
     kasaPayi: al('kasaPayi'),
     kayitGenisligi: al('kayitGenisligi'),
     kanatCamPayi: al('kanatCamPayi'),
+    kanatCamPayiBoy: al('kanatCamPayiBoy'),
     sabitCamPayi: al('sabitCamPayi'),
   };
+}
+
+
+/* ============================================================
+   PROFİL KALİBRASYONU
+
+   Usta elindeki BİR pencereyi ölçer, uygulama profil paylarını
+   kendisi hesaplar. Katalog aramaya gerek kalmaz.
+
+   Ölçülecekler (çıta sökülü, kanat çıkarılmış hâlde):
+     1. Pencerenin dış boyu           → disBoy
+     2. Kanadın dış boyu              → kanatDisBoy
+     3. Kanadın dış eni               → kanatDisEn
+     4. Kanat camının eni             → kanatCamEn
+     5. Orta kayıt genişliği (varsa)  → kayitGenisligi
+     6. Sabit camın boyu (varsa)      → sabitCamBoy
+
+   Türetilenler:
+     kasaPayi       = (disBoy - kanatDisBoy) / 2
+     kanatCamPayi    = (kanatDisEn  - kanatCamEn)  / 2   (yan kenarlar)
+     kanatCamPayiBoy = (kanatDisBoy - kanatCamBoy) / 2   (üst/alt)
+     sabitCamPayi   = (disBoy - 2·kasaPayi - sabitCamBoy) / 2
+   ============================================================ */
+export function paylariKalibreEt(olcum) {
+  const s = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+
+  const disBoy = s(olcum?.disBoy);
+  const kanatDisBoy = s(olcum?.kanatDisBoy);
+  const kanatDisEn = s(olcum?.kanatDisEn);
+  const kanatCamEn = s(olcum?.kanatCamEn);
+  const kanatCamBoy = s(olcum?.kanatCamBoy);
+  const kayitOlcum = s(olcum?.kayitGenisligi);
+  const sabitCamBoy = s(olcum?.sabitCamBoy);
+
+  const sonuc = { paylar: {}, uyarilar: [], eksik: [] };
+
+  /* --- kasa payı --- */
+  let kasaPayi = null;
+  if (disBoy && kanatDisBoy) {
+    if (kanatDisBoy >= disBoy) {
+      sonuc.uyarilar.push('Kanat dış boyu pencere dış boyundan büyük olamaz.');
+    } else {
+      kasaPayi = (disBoy - kanatDisBoy) / 2;
+      if (kasaPayi < 15 || kasaPayi > 120) {
+        sonuc.uyarilar.push(
+          `Kasa payı ${kasaPayi.toFixed(1)} mm çıktı — beklenen aralık 15-120 mm. Ölçüleri kontrol edin.`
+        );
+      } else {
+        sonuc.paylar.kasaPayi = Number(kasaPayi.toFixed(1));
+      }
+    }
+  } else {
+    sonuc.eksik.push('Pencere dış boyu ve kanat dış boyu');
+  }
+
+  /* --- kanat cam payı --- */
+  if (kanatDisEn && kanatCamEn) {
+    if (kanatCamEn >= kanatDisEn) {
+      sonuc.uyarilar.push('Cam eni kanat dış eninden büyük olamaz.');
+    } else {
+      const v = (kanatDisEn - kanatCamEn) / 2;
+      if (v < 15 || v > 120) {
+        sonuc.uyarilar.push(
+          `Kanat cam payı ${v.toFixed(1)} mm çıktı — beklenen aralık 15-120 mm. Camı mı kanadı mı ölçtüğünüzü kontrol edin.`
+        );
+      } else {
+        sonuc.paylar.kanatCamPayi = Number(v.toFixed(1));
+      }
+    }
+  } else {
+    sonuc.eksik.push('Kanat dış eni ve kanat camı eni');
+  }
+
+  /* --- kanat cam payı (boy) — alt ray genelde daha geniştir --- */
+  if (kanatDisBoy && kanatCamBoy) {
+    if (kanatCamBoy >= kanatDisBoy) {
+      sonuc.uyarilar.push('Cam boyu kanat dış boyundan büyük olamaz.');
+    } else {
+      const v = (kanatDisBoy - kanatCamBoy) / 2;
+      if (v < 15 || v > 120) {
+        sonuc.uyarilar.push(
+          `Kanat cam payı (boy) ${v.toFixed(1)} mm çıktı — beklenen aralık 15-120 mm.`
+        );
+      } else {
+        sonuc.paylar.kanatCamPayiBoy = Number(v.toFixed(1));
+      }
+    }
+  }
+
+  /* --- orta kayıt: doğrudan ölçülür --- */
+  if (kayitOlcum) {
+    if (kayitOlcum < 30 || kayitOlcum > 200) {
+      sonuc.uyarilar.push(`Orta kayıt ${kayitOlcum} mm çıktı — beklenen aralık 30-200 mm.`);
+    } else {
+      sonuc.paylar.kayitGenisligi = Number(kayitOlcum.toFixed(1));
+    }
+  }
+
+  /* --- sabit cam payı --- */
+  if (sabitCamBoy && (kasaPayi || sonuc.paylar.kasaPayi)) {
+    const kp = sonuc.paylar.kasaPayi ?? kasaPayi;
+    const icYuk = disBoy - 2 * kp;
+    const v = (icYuk - sabitCamBoy) / 2;
+    if (v < 0 || v > 60) {
+      sonuc.uyarilar.push(
+        `Sabit cam payı ${v.toFixed(1)} mm çıktı — beklenen aralık 0-60 mm.`
+      );
+    } else {
+      sonuc.paylar.sabitCamPayi = Number(v.toFixed(1));
+    }
+  }
+
+  sonuc.gecerli = Object.keys(sonuc.paylar).length > 0;
+  return sonuc;
 }
 
 /* ============================================================
@@ -142,9 +275,9 @@ export const VARSAYILAN_FIYATLAR = {
 
   /* profil payları — firma kendi profiline göre düzeltebilir */
   profilPaylari: {
-    60: { kasaPayi: 55, kayitGenisligi: 72, kanatCamPayi: 53, sabitCamPayi: 23 },
-    70: { kasaPayi: 60, kayitGenisligi: 80, kanatCamPayi: 57.5, sabitCamPayi: 25 },
-    80: { kasaPayi: 66, kayitGenisligi: 88, kanatCamPayi: 63, sabitCamPayi: 27 },
+    60: { kasaPayi: 32, kayitGenisligi: 60, kanatCamPayi: 39, kanatCamPayiBoy: 50, sabitCamPayi: 5 },
+    70: { kasaPayi: 35, kayitGenisligi: 65, kanatCamPayi: 42.5, kanatCamPayiBoy: 55, sabitCamPayi: 5 },
+    80: { kasaPayi: 40, kayitGenisligi: 72, kanatCamPayi: 47, kanatCamPayiBoy: 61, sabitCamPayi: 5 },
   },
 
   camlar: {

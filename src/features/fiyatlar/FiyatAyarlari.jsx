@@ -1,7 +1,14 @@
 import React from 'react';
 import { CAM_TIPLERI, SINEKLIK_TIPLERI, PROFIL_SERILERI } from '../../utils/fiyatTablosu.js';
+import ProfilKalibrasyon from '../../components/ProfilKalibrasyon.jsx';
 
 export default function FiyatAyarlari({ tablo, yukleniyor, degistir, kaydet, aktifSeri, seriDegis }) {
+  const profilPaylariUygula = (seri, paylar) => {
+    Object.entries(paylar).forEach(([alan, deger]) => {
+      degistir(['profilPaylari', seri, alan], deger);
+    });
+  };
+
   return (
     <>
       <div className="mobil-sutun" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '8px' }}>
@@ -119,7 +126,8 @@ export default function FiyatAyarlari({ tablo, yukleniyor, degistir, kaydet, akt
                 {[
                   { key: 'kasaPayi', label: 'Kasa Payı (mm)' },
                   { key: 'kayitGenisligi', label: 'Kayıt Genişliği (mm)' },
-                  { key: 'kanatCamPayi', label: 'Kanat Cam Payı (mm)' },
+                  { key: 'kanatCamPayi', label: 'Kanat Cam Payı (yan) (mm)' },
+                  { key: 'kanatCamPayiBoy', label: 'Kanat Cam Payı (üst/alt) (mm)' },
                   { key: 'sabitCamPayi', label: 'Sabit Cam Payı (mm)' },
                 ].map(item => (
                   <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
@@ -130,6 +138,12 @@ export default function FiyatAyarlari({ tablo, yukleniyor, degistir, kaydet, akt
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {!yukleniyor && (
+        <div style={{ marginTop: '12px' }}>
+          <ProfilKalibrasyon tablo={tablo} onUygula={profilPaylariUygula} />
         </div>
       )}
     </>
