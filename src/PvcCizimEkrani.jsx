@@ -859,6 +859,7 @@ export default function PvcCizimEkrani() {
                 enineBolmeYuksekligi={enineBolmeYerdenYukseklik}
                 camParcalari={sonuc?.metraj?.camParcalari}
                 fiyatTablosu={fiyatTablo}
+                eksenOlculeri={sonuc?.olculer?.eksenOlculeri}
               />
             </div>
 

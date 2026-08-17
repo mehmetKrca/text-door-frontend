@@ -767,6 +767,60 @@ console.log('\nTEST 24 — profil kalibrasyonu');
   esit('kalibre sonrası açılır cam 455', ac.en, 455, 3);
 }
 
+
+/* ============================================================
+   TEST 25 — EKSEN ÖLÇÜLERİ GİRİLENLE BİREBİR AYNI
+   ============================================================
+   Kullanıcının girdiği bölme ölçüsü, çizimde ve kesim listesinde
+   AYNEN görünmeli. Yuvarlama yüzünden 1 mm bile kaymamalı.
+   Daha önce net açıklık 412,5 → 413'e yuvarlanıyor, çizim buna
+   yarım kayıt ekleyince 480 yerine 481 yazıyordu.
+*/
+console.log('\nTEST 25 — eksen ölçüsü kayması olmamalı');
+{
+  const eksen = (olculer, en = 1500, bolme = 2, kanatlar = ['sabit', 'sag']) =>
+    hesapla({
+      urunTipi: 'pencere', genislik: en, yukseklik: 1420,
+      bolmeSayisi: bolme, kanatlar, bolmeOlculeri: olculer,
+      renk: 'beyaz', camTipi: 'klasik', profilSerisi: 70, adet: 1,
+    }, T).olculer.eksenOlculeri;
+
+  /* kullanıcının bildirdiği durum: 480/680 girildi, 481/679 görünüyordu */
+  const a = eksen([480, 680], 1160);
+  esit('480 girildi → 480 çıktı', a[0], 480);
+  esit('680 girildi → 680 çıktı', a[1], 680);
+  esit('toplam 1160', a[0] + a[1], 1160);
+
+  const b = eksen([750, 750]);
+  esit('750/750 aynen', b.join('/') === '750/750' ? 1 : 0, 1);
+
+  const c = eksen([900, 600]);
+  esit('900/600 aynen', c.join('/') === '900/600' ? 1 : 0, 1);
+
+  const d = eksen([500, 500, 500], 1500, 3, ['sabit', 'sag', 'sabit']);
+  esit('500/500/500 aynen', d.join('/') === '500/500/500' ? 1 : 0, 1);
+
+  /* otomatik bölmede de toplam tam tutmalı */
+  const e = eksen([], 1160);
+  esit('otomatik toplam 1160', e.reduce((x, y) => x + y, 0), 1160);
+  const f = eksen([], 1500, 3, ['sabit', 'sag', 'sabit']);
+  esit('otomatik 3 bölme toplam 1500', f.reduce((x, y) => x + y, 0), 1500);
+
+  /* tek bölmede eksen = toplam genişlik */
+  const g1 = eksen([], 1500, 1, ['sag']);
+  esit('tek bölme eksen 1500', g1[0], 1500);
+
+  /* 500 rastgele senaryoda toplam her zaman tam tutmalı */
+  let sorun = 0;
+  for (let i = 0; i < 500; i++) {
+    const en = 400 + Math.floor(Math.random() * 4000);
+    const n = 1 + Math.floor(Math.random() * 4);
+    const ee = eksen([], en, n, Array(n).fill('sabit'));
+    if (ee.reduce((x, y) => x + y, 0) !== en) sorun++;
+  }
+  dogru(`500 rastgele senaryoda toplam tam tutuyor (${sorun} sapma)`, sorun === 0);
+}
+
 /* ============================================================
    ÖZET
    ============================================================ */

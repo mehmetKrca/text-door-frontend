@@ -34,6 +34,9 @@ export default function DogramaCizim({
   sagYukseklik,
   bolmeSayisi = 1,
   bolmeGenislikleri,          // fiyat motorundan gelirse kullanılır
+  eksenOlculeri = null,       // motordan gelen eksen ölçüleri — ara ölçü
+                              // etiketleri bunlardan yazılır, yeniden
+                              // hesaplanmaz (yuvarlama kayması olmasın)
   kanatlar = ['sabit'],
   renkId = 'beyaz',
   profilSerisi = 70,
@@ -508,17 +511,30 @@ export default function DogramaCizim({
         <>
           {/* ara ölçüler — eksen bazlı, toplamı toplam ene eşit */}
           {n > 1 && (() => {
+            /* Çizgi konumları piksel geometrisinden, YAZILAN DEĞERLER ise
+               motordan gelir. Böylece kullanıcının girdiği ölçü ile ekranda
+               gördüğü ölçü hiçbir zaman ayrışmaz. Motordan gelmezse son
+               çare olarak geometriden türetilir. */
             const sinirlar = [X];
             bolmeler.slice(0, -1).forEach((b) => sinirlar.push(b.bx + b.bw + kayit / 2));
             sinirlar.push(X + W);
+
+            const motordan = Array.isArray(eksenOlculeri) && eksenOlculeri.length === n
+              ? eksenOlculeri.map((v) => Math.round(Number(v) || 0))
+              : null;
+
             const parcalar = [];
             let toplam = 0;
             for (let i = 0; i < sinirlar.length - 1; i++) {
-              const d = Math.round((sinirlar[i + 1] - sinirlar[i]) / olcek);
+              const d = motordan
+                ? motordan[i]
+                : Math.round((sinirlar[i + 1] - sinirlar[i]) / olcek);
               toplam += d;
               parcalar.push({ x1: sinirlar[i], x2: sinirlar[i + 1], mm: d });
             }
-            if (parcalar.length) parcalar[parcalar.length - 1].mm += (mmEn - toplam);
+            if (!motordan && parcalar.length) {
+              parcalar[parcalar.length - 1].mm += (mmEn - toplam);
+            }
 
             return parcalar.map((a, i) => (
               <g key={`ao${i}`} stroke="#94a1b2" strokeWidth="0.8">

@@ -129,6 +129,19 @@ export function hesapla(g, t) {
     bolmeGenislikleri = Array(bolmeSayisi).fill(netBolmeToplam / bolmeSayisi);
   }
 
+  /* EKSEN ÖLÇÜLERİ — çizim ve kesim listesi bunları kullanır.
+     Burada üretilir ki çizim yeniden hesaplayıp yuvarlama hatası
+     yapmasın. Toplamı her zaman tam olarak toplam genişliğe eşittir. */
+  const eksenOlculeri = bolmeGenislikleri.map((net, i) => {
+    const solPay = i === 0 ? kasaPayi : kayitGen / 2;
+    const sagPay = i === bolmeSayisi - 1 ? kasaPayi : kayitGen / 2;
+    return net + solPay + sagPay;
+  });
+  /* yuvarlama farkını son ölçüye yaz — toplam birebir tutsun */
+  const eksenYuvarli = eksenOlculeri.map((e) => Math.round(e));
+  const eksenFark = gGen - eksenYuvarli.reduce((a, b) => a + b, 0);
+  if (eksenYuvarli.length) eksenYuvarli[eksenYuvarli.length - 1] += eksenFark;
+
   /* --- enine (yatay) kayıt --- */
   const lambiriIzinliUrunler = ['kapi', 'wc_kapi', 'balkonkapi', 'fransiz'];
   const lambiriVar = lambiriIzinliUrunler.includes(urunTipi) && !!g.lambiriVar;
@@ -338,6 +351,7 @@ export function hesapla(g, t) {
       icGenislik: Math.round(icGen),
       icYukseklik: Math.round(icYuk),
       bolmeGenislikleri: bolmeGenislikleri.map((b) => Math.round(b)),
+      eksenOlculeri: eksenYuvarli,
       enineAktif,
       ustNetYuk: Math.round(ustNetYuk),
       altNetYuk: Math.round(altNetYuk),
