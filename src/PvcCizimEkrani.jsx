@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import API, { getAbonelikDurumu } from './services/api';
 import { useAuth } from './context/AuthContext.jsx';
 import { hesapla, hesaplaSineklik } from './utils/fiyatHesapla.js';
-import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI, sineklikRenkVarMi } from './utils/fiyatTablosu.js';
+import { VARSAYILAN_FIYATLAR, fiyatTablosunuDonustur, SINEKLIK_TIPLERI, sineklikRenkVarMi, PROFIL_SERILERI, seriNoDuzelt } from './utils/fiyatTablosu.js';
 import { patronOzetiHesapla } from './utils/patronOzeti.js';
 import DogramaCizim from './components/DogramaCizim.jsx';
 import SineklikCizim, { SINEKLIK_RENKLERI, sineklikRenkKademesi } from './components/SineklikCizim.jsx';
@@ -197,7 +197,7 @@ export default function PvcCizimEkrani() {
   
   const [profilSerisi, setProfilSerisi] = useState(() => {
     const kayitliSeri = localStorage.getItem('ustaProfilSerisi');
-    return kayitliSeri ? Number(kayitliSeri) : 70;
+    return kayitliSeri ? seriNoDuzelt(kayitliSeri) : 70;
   });
 
   useEffect(() => {
@@ -605,7 +605,7 @@ export default function PvcCizimEkrani() {
     if (SP_URUN_TIPLERI_TUMU.includes(kalem.urunTipi)) {
       setSpTipi(spTipiDonustur(kalem.urunTipi)); setSpGenislik(kalem.genislik || 800); setSpYukseklik(kalem.yukseklik || 2000); setSpAdet(kalem.adet || 1); setSpAcilimYonu(kalem.acilimYonu === 'yatay' ? 'yatay' : 'dikey'); setSpRenk(SINEKLIK_RENKLERI[kalem.renk] ? kalem.renk : 'beyaz'); handleSekmeDegistir('sineklik');
     } else {
-      setUrunTipi(kalem.urunTipi); setGenislik(kalem.genislik); setYukseklik(kalem.yukseklik); setSagYukseklik(kalem.sagYukseklik || 1600); setBolmeSayisi(kalem.bolmeSayisi); setKanatlar(kalem.kanatlar); setBolmeOlculeri(kalem.bolmeOlculeri || Array(kalem.bolmeSayisi).fill(0)); setRenk(kalem.renk); setCamTipi(camTipiDonustur(kalem.camTipi)); setAltPanelLambiri(kalem.altPanelLambiri !== undefined ? kalem.altPanelLambiri : true); setEnineBolmeVar(kalem.enineBolmeVar || false); setEnineBolmeYerdenYukseklik(kalem.enineBolmeYerdenYukseklik || 800); setLambiriBoyu(kalem.lambiriBoyu || 800); setLambiriYonu(kalem.lambiriYonu === 'dikey' ? 'dikey' : 'yatay'); setProfilSerisi(kalem.profilSerisi || 70); setAciModu(kalem.aciModu || 'aci_bul'); setManuelAci(kalem.manuelAci || 20); setEgimYonu(kalem.egimYonu || 'saga_yukselir'); handleSekmeDegistir('cizim');
+      setUrunTipi(kalem.urunTipi); setGenislik(kalem.genislik); setYukseklik(kalem.yukseklik); setSagYukseklik(kalem.sagYukseklik || 1600); setBolmeSayisi(kalem.bolmeSayisi); setKanatlar(kalem.kanatlar); setBolmeOlculeri(kalem.bolmeOlculeri || Array(kalem.bolmeSayisi).fill(0)); setRenk(kalem.renk); setCamTipi(camTipiDonustur(kalem.camTipi)); setAltPanelLambiri(kalem.altPanelLambiri !== undefined ? kalem.altPanelLambiri : true); setEnineBolmeVar(kalem.enineBolmeVar || false); setEnineBolmeYerdenYukseklik(kalem.enineBolmeYerdenYukseklik || 800); setLambiriBoyu(kalem.lambiriBoyu || 800); setLambiriYonu(kalem.lambiriYonu === 'dikey' ? 'dikey' : 'yatay'); setProfilSerisi(seriNoDuzelt(kalem.profilSerisi || 70)); setAciModu(kalem.aciModu || 'aci_bul'); setManuelAci(kalem.manuelAci || 20); setEgimYonu(kalem.egimYonu || 'saga_yukselir'); handleSekmeDegistir('cizim');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
@@ -858,6 +858,7 @@ export default function PvcCizimEkrani() {
                 enineBolmeVar={enineBolmeVar}
                 enineBolmeYuksekligi={enineBolmeYerdenYukseklik}
                 camParcalari={sonuc?.metraj?.camParcalari}
+                fiyatTablosu={fiyatTablo}
               />
             </div>
 
@@ -1073,7 +1074,7 @@ export default function PvcCizimEkrani() {
             <div style={{ marginBottom: '16px', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <strong style={{ color: '#1E3A8A', fontSize: '13px' }}>Profil Serisi:</strong>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {[50, 60, 70, 80, 90].map(seri => (
+                {PROFIL_SERILERI.map(seri => (
                   <label key={seri} style={{ cursor: 'pointer', fontSize: '12px', fontWeight: profilSerisi === seri ? 'bold' : 'normal', color: profilSerisi === seri ? '#1E3A8A' : '#555', display: 'flex', alignItems: 'center' }}>
                     <input type="radio" name="profilSerisi" value={seri} checked={profilSerisi === seri} onChange={(e) => setProfilSerisi(Number(e.target.value))} style={{ marginRight: '3px' }} />
                     {seri}'lik

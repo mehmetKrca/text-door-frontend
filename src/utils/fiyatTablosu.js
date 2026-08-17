@@ -25,6 +25,68 @@ export const GORSEL_RENKLER = [
 export const renkKademesi = (renkId) =>
   GORSEL_RENKLER.find((r) => r.id === renkId)?.kademe || 'beyaz';
 
+
+/* ============================================================
+   PROFİL SERİLERİ — CAM ÖLÇÜSÜ PAYLARI
+
+   ⚠️ KRİTİK BİLGİ: "70mm seri" profilin DERİNLİĞİDİR (kasa kalınlığı),
+   görünen yüz genişliği DEĞİLDİR. Cam ölçüsü görünen yüz genişliklerine
+   ve cam oturma paylarına göre hesaplanır.
+
+   Bu değerler profil üreticisinin teknik katalogundan gelir —
+   Winsa, Egepen, Fırat, Adopen, Pimapen hepsi farklıdır.
+   Firma kendi profiline göre Fiyat Ayarları'ndan düzeltir.
+
+     kasaPayi       : dış ölçüden HER KENARDAN düşülen kasa payı
+     kayitGenisligi : orta kayıt (dikme) toplam görünen genişliği
+     kanatCamPayi   : AÇILAN bölmede net açıklıktan her kenardan düşülen
+                      pay (kanat profili + cam çıtası birlikte)
+     sabitCamPayi   : SABİT bölmede her kenardan düşülen pay (yalnız çıta)
+
+   70'lik seri değerleri gerçek bir pencere ölçüsüyle doğrulandı:
+     1120×1480, eksen 700/420 → açılır cam 485, sabit cam 270 ✓
+   60 ve 80'lik seriler tahminidir, firma kendi profiliyle doğrulamalı.
+   ============================================================ */
+
+export const PROFIL_SERILERI = [60, 70, 80];
+
+export const VARSAYILAN_PROFIL_PAYLARI = {
+  60: { kasaPayi: 55, kayitGenisligi: 72, kanatCamPayi: 53, sabitCamPayi: 23 },
+  70: { kasaPayi: 60, kayitGenisligi: 80, kanatCamPayi: 57.5, sabitCamPayi: 25 },
+  80: { kasaPayi: 66, kayitGenisligi: 88, kanatCamPayi: 63, sabitCamPayi: 27 },
+};
+
+/** Seri numarasını güvenli hale getirir — 60/70/80 dışındaki değer 70 sayılır */
+export const seriNoDuzelt = (seri) => {
+  const n = Math.round(Number(seri));
+  return PROFIL_SERILERI.includes(n) ? n : 70;
+};
+
+/**
+ * Bir seri için geçerli payları döndürür.
+ * Firma fiyat tablosunda özel değer varsa o kullanılır, yoksa varsayılan.
+ * Geçersiz/sıfır değerler sessizce varsayılana düşer — cam ölçüsü asla
+ * bozuk çıkmasın.
+ */
+export function profilPaylariAl(seri, tablo) {
+  const no = seriNoDuzelt(seri);
+  const varsayilan = VARSAYILAN_PROFIL_PAYLARI[no];
+  const ozel = tablo?.profilPaylari?.[no] || tablo?.profilPaylari?.[String(no)];
+
+  const al = (alan) => {
+    const v = Number(ozel?.[alan]);
+    return Number.isFinite(v) && v > 0 && v < 300 ? v : varsayilan[alan];
+  };
+
+  return {
+    seri: no,
+    kasaPayi: al('kasaPayi'),
+    kayitGenisligi: al('kayitGenisligi'),
+    kanatCamPayi: al('kanatCamPayi'),
+    sabitCamPayi: al('sabitCamPayi'),
+  };
+}
+
 /* ============================================================
    CAM TİPLERİ
    ============================================================ */
@@ -76,6 +138,13 @@ export const VARSAYILAN_FIYATLAR = {
       surmeKanadi: 290,
       lambiri: 480,
     },
+  },
+
+  /* profil payları — firma kendi profiline göre düzeltebilir */
+  profilPaylari: {
+    60: { kasaPayi: 55, kayitGenisligi: 72, kanatCamPayi: 53, sabitCamPayi: 23 },
+    70: { kasaPayi: 60, kayitGenisligi: 80, kanatCamPayi: 57.5, sabitCamPayi: 25 },
+    80: { kasaPayi: 66, kayitGenisligi: 88, kanatCamPayi: 63, sabitCamPayi: 27 },
   },
 
   camlar: {

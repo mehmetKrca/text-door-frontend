@@ -12,6 +12,9 @@
 import { hesapla, hesaplaSineklik } from './fiyatHesapla.js';
 import {
   VARSAYILAN_FIYATLAR,
+  profilPaylariAl,
+  seriNoDuzelt,
+  PROFIL_SERILERI,
   fiyatTablosunuDonustur,
   fiyatTablosuUyarilari,
   sineklikRenkVarMi,
@@ -61,20 +64,20 @@ console.log('\nTEST 1 — 1500×1200 pencere, 2 bölme (sabit + sağa açılır)
     renk: 'beyaz', camTipi: 'klasik', profilSerisi: 70, adet: 1,
   }, T);
 
-  esit('bölme genişliği 645 mm', s.olculer.bolmeGenislikleri[0], 645, 1);
+  esit('bölme genişliği 650 mm', s.olculer.bolmeGenislikleri[0], 650, 1);
   esit('kasa metrajı 6,048 m', s.metraj.kasaM, 6.048, 0.002);
-  esit('kanat metrajı 3,819 m', s.metraj.kanatM, 3.819, 0.005);
-  esit('cam alanı 1,095 m²', s.metraj.camM2, 1.095, 0.005);
-  esit('profil maliyeti 2.211 ₺', s.maliyet.profil, 2211, 3);
-  esit('cam maliyeti 1.204 ₺', s.maliyet.cam, 1204, 3);
+  esit('kanat metrajı 3,875 m', s.metraj.kanatM, 3.875, 0.005);
+  esit('cam alanı 1,134 m²', s.metraj.camM2, 1.134, 0.005);
+  esit('profil maliyeti 2.227 ₺', s.maliyet.profil, 2227, 3);
+  esit('cam maliyeti 1.248 ₺', s.maliyet.cam, 1248, 3);
   esit('aksesuar 400 ₺', s.maliyet.aksesuar, 400);
-  esit('ham maliyet 3.815 ₺', s.maliyet.ham, 3815, 4);
+  esit('ham maliyet 3.874 ₺', s.maliyet.ham, 3874, 4);
   dogru('uyarı yok', s.uyarilar.length === 0);
 
   // KRİTİK: açılan kanadın cam ölçüsü kanat profilini de düşmeli
   const acilanCam = s.metraj.camParcalari.find((c) => c.bolme === 2);
-  esit('açılan kanat cam eni 505 mm', acilanCam.en, 505, 1);
-  esit('açılan kanat cam boyu 920 mm', acilanCam.boy, 920, 1);
+  esit('açılan kanat cam eni 535 mm', acilanCam.en, 535, 1);
+  esit('açılan kanat cam boyu 965 mm', acilanCam.boy, 965, 1);
 }
 
 /* ============================================================
@@ -114,11 +117,11 @@ console.log('\nTEST 3 — kâr / montaj / KDV');
     karYuzde: 20, montajTL: 1000, kdvEkle: true,
   }, T);
 
-  esit('kâr tutarı 763 ₺', s.teklifDetay.kar, 763, 3);
+  esit('kâr tutarı 775 ₺', s.teklifDetay.kar, 775, 3);
   esit('montaj 1.000 ₺', s.teklifDetay.montaj, 1000);
-  esit('KDV öncesi 5.578 ₺', s.teklifDetay.kdvOncesi, 5578, 5);
-  esit('KDV 1.116 ₺', s.teklifDetay.kdv, 1116, 3);
-  esit('teklif 6.694 ₺', s.teklifDetay.toplam, 6694, 5);
+  esit('KDV öncesi 5.649 ₺', s.teklifDetay.kdvOncesi, 5649, 5);
+  esit('KDV 1.130 ₺', s.teklifDetay.kdv, 1130, 3);
+  esit('teklif 6.779 ₺', s.teklifDetay.toplam, 6779, 5);
 }
 
 /* ============================================================
@@ -266,7 +269,7 @@ console.log('\nTEST 9 — sürüm 1 → sürüm 2 dönüşümü');
     renk: 'beyaz', camTipi: 'klasik', profilSerisi: 70, adet: 1,
   }, yeni);
   dogru('dönüştürülen tabloyla hesap sorunsuz', s.uyarilar.length === 0);
-  esit('sonuç sürüm 1 ile aynı', s.maliyet.ham, 3815, 4);
+  esit('sonuç sürüm 1 ile aynı', s.maliyet.ham, 3874, 4);
 }
 
 /* ============================================================
@@ -416,7 +419,7 @@ console.log('\nTEST 15 — doğramada artık zorunlu sineklik yok');
 
   esit('sineklik kalemi sıfır', sineklikli.maliyet.sineklik, 0);
   esit('iki hesap aynı', sineklikli.maliyet.ham, sinekliksiz.maliyet.ham);
-  esit('doğrama maliyeti 3.815 ₺ olarak kaldı', sineklikli.maliyet.ham, 3815, 4);
+  esit('doğrama maliyeti 3.874 ₺ olarak kaldı', sineklikli.maliyet.ham, 3874, 4);
 }
 
 console.log('\nTEST 16 — sineklikte bozuk girdi dayanıklılığı');
@@ -545,9 +548,10 @@ console.log('\nTEST 19 — sineklikte renk kademesi');
    Girilen değerlerin toplamı toplam genişliğe eşit olmalıdır.
 
    1500 mm, 2 bölme, p=70:
-     750 girildi → net = 750 - 70 (kasa) - 35 (yarım kayıt) = 645
-     750 girildi → net = 750 - 35 (yarım kayıt) - 70 (kasa) = 645
-   Toplam net = 1290 = icGen(1360) - dikme(70) ✓
+   70'lik seride: kasaPayi 60, kayitGenisligi 80
+     750 girildi → net = 750 - 60 (kasa) - 40 (yarım kayıt) = 650
+     750 girildi → net = 750 - 40 (yarım kayıt) - 60 (kasa) = 650
+   Toplam net = 1300 = icGen(1380) - kayıt(80) ✓
 */
 console.log('\nTEST 20 — bölme ölçüleri eksen bazlı');
 {
@@ -557,48 +561,49 @@ console.log('\nTEST 20 — bölme ölçüleri eksen bazlı');
     renk: 'beyaz', camTipi: 'klasik', profilSerisi: 70, adet: 1,
   }, T);
 
-  /* eksen ölçüsünü net açıklıktan geri hesaplar */
-  const eksene = (net, i, n, p = 70) =>
-    Math.round(net + (i === 0 ? p : p / 2) + (i === n - 1 ? p : p / 2));
+  /* eksen ölçüsünü net açıklıktan geri hesaplar (70'lik seri payları) */
+  const KASA = 60, KAYIT = 80;
+  const eksene = (net, i, n) =>
+    Math.round(net + (i === 0 ? KASA : KAYIT / 2) + (i === n - 1 ? KASA : KAYIT / 2));
 
   // --- simetrik ---
   const a = yap([750, 750]);
-  esit('750/750 → net 645', a.olculer.bolmeGenislikleri[0], 645, 1);
-  esit('750/750 → net 645 (2.)', a.olculer.bolmeGenislikleri[1], 645, 1);
+  esit('750/750 → net 650', a.olculer.bolmeGenislikleri[0], 650, 1);
+  esit('750/750 → net 650 (2.)', a.olculer.bolmeGenislikleri[1], 650, 1);
   esit('eksen geri 750', eksene(a.olculer.bolmeGenislikleri[0], 0, 2), 750, 1);
   esit('eksen geri 750 (2.)', eksene(a.olculer.bolmeGenislikleri[1], 1, 2), 750, 1);
   dogru('simetrikte uyarı yok', a.uyarilar.length === 0);
 
   // --- asimetrik: eski kod burada 21 mm sapıyordu ---
   const b = yap([900, 600]);
-  esit('900/600 → net 795', b.olculer.bolmeGenislikleri[0], 795, 1);
-  esit('900/600 → net 495', b.olculer.bolmeGenislikleri[1], 495, 1);
+  esit('900/600 → net 800', b.olculer.bolmeGenislikleri[0], 800, 1);
+  esit('900/600 → net 500', b.olculer.bolmeGenislikleri[1], 500, 1);
   esit('eksen geri 900', eksene(b.olculer.bolmeGenislikleri[0], 0, 2), 900, 1);
   esit('eksen geri 600', eksene(b.olculer.bolmeGenislikleri[1], 1, 2), 600, 1);
   dogru('asimetrikte uyarı yok', b.uyarilar.length === 0);
 
   // --- 3 bölme: ortadaki iki yarım kayıt payı düşer ---
   const c = yap([500, 500, 500], 3, ['sabit', 'sag', 'sabit']);
-  esit('3 bölme ilk net 395', c.olculer.bolmeGenislikleri[0], 395, 1);
-  esit('3 bölme orta net 430', c.olculer.bolmeGenislikleri[1], 430, 1);
-  esit('3 bölme son net 395', c.olculer.bolmeGenislikleri[2], 395, 1);
+  esit('3 bölme ilk net 400', c.olculer.bolmeGenislikleri[0], 400, 1);
+  esit('3 bölme orta net 420', c.olculer.bolmeGenislikleri[1], 420, 1);
+  esit('3 bölme son net 400', c.olculer.bolmeGenislikleri[2], 400, 1);
   esit('3 bölme eksen 500', eksene(c.olculer.bolmeGenislikleri[1], 1, 3), 500, 1);
 
   // --- toplam tutmuyorsa oranla + uyar ---
   const d = yap([800, 800]);
   dogru('yanlış toplamda uyarı var', d.uyarilar.some((u) => u.includes('toplam')));
-  esit('oranlanmış net 645', d.olculer.bolmeGenislikleri[0], 645, 2);
+  esit('oranlanmış net 650', d.olculer.bolmeGenislikleri[0], 650, 2);
 
   // --- hiç girilmemişse eşit böl ---
   const e = yap([]);
-  esit('otomatik eşit böl', e.olculer.bolmeGenislikleri[0], 645, 1);
+  esit('otomatik eşit böl', e.olculer.bolmeGenislikleri[0], 650, 1);
   dogru('otomatikte uyarı yok', e.uyarilar.length === 0);
 
   // --- net toplam her durumda doğru olmalı ---
   [a, b, c, d, e].forEach((s, i) => {
     const toplam = s.olculer.bolmeGenislikleri.reduce((x, y) => x + y, 0);
     const n = s.olculer.bolmeGenislikleri.length;
-    const beklenen = s.olculer.icGenislik - (n - 1) * 70;
+    const beklenen = s.olculer.icGenislik - (n - 1) * KAYIT;
     dogru(`senaryo ${i + 1} net toplamı tutuyor`, Math.abs(toplam - beklenen) < 2);
   });
 }
@@ -617,6 +622,80 @@ console.log('\nTEST 21 — lambiri sadece kullanıcı isterse');
   dogru('fransız balkon lambirili', yap('fransiz', true).metraj.lambiriM2 > 0);
   esit('pencerede lambiri yok', yap('pencere', true).metraj.lambiriM2, 0);
   esit('sürgülüde lambiri yok', yap('surgulu', true).metraj.lambiriM2, 0);
+}
+
+
+/* ============================================================
+   TEST 22 — CAM ÖLÇÜSÜ GERÇEK PENCEREYLE DOĞRULANDI
+   ============================================================
+   Bu test gerçek bir pencerenin elle ölçülmüş cam ebatlarına dayanır.
+   Kırılırsa cam ölçüsü hesabı bozulmuş demektir — imalata yanlış cam
+   siparişi gider. ASLA "beklenen değeri güncelleyerek" geçirilmemeli,
+   önce sebebi bulunmalı.
+
+   Gerçek pencere:  1120 × 1480, 70'lik seri
+   Bölme eksenleri: 700 (açılır) / 420 (sabit)
+   Elle ölçülen cam: açılır 485 mm · sabit 270 mm
+*/
+console.log('\nTEST 22 — cam ölçüsü gerçek pencereyle doğrulama');
+{
+  const s = hesapla({
+    urunTipi: 'pencere', genislik: 1120, yukseklik: 1480,
+    bolmeSayisi: 2, kanatlar: ['cift_sag', 'sabit'],
+    bolmeOlculeri: [700, 420],
+    renk: 'beyaz', camTipi: 'klasik', profilSerisi: 70, adet: 1,
+  }, T);
+
+  const acilir = s.metraj.camParcalari.find((c) => c.bolme === 1);
+  const sabit = s.metraj.camParcalari.find((c) => c.bolme === 2);
+
+  esit('AÇILIR cam eni 485 mm (gerçek ölçü)', acilir.en, 485, 1);
+  esit('SABİT cam eni 270 mm (gerçek ölçü)', sabit.en, 270, 1);
+  esit('açılır net açıklık 600', s.olculer.bolmeGenislikleri[0], 600, 1);
+  esit('sabit net açıklık 320', s.olculer.bolmeGenislikleri[1], 320, 1);
+  dogru('sabit cam açılırdan daha az pay yer', sabit.boy > acilir.boy);
+}
+
+console.log('\nTEST 23 — profil serisi payları');
+{
+  dogru('sadece 60/70/80 var', PROFIL_SERILERI.join() === '60,70,80');
+  esit('geçersiz seri 70 olur', seriNoDuzelt(50), 70);
+  esit('geçersiz seri 70 olur (metin)', seriNoDuzelt('abc'), 70);
+  esit('60 korunur', seriNoDuzelt(60), 60);
+  esit('80 korunur', seriNoDuzelt('80'), 80);
+
+  // seri büyüdükçe cam küçülür — profil daha kalın
+  const camEni = (seri) => hesapla({
+    urunTipi: 'pencere', genislik: 1500, yukseklik: 1200, bolmeSayisi: 1,
+    kanatlar: ['sag'], renk: 'beyaz', camTipi: 'klasik',
+    profilSerisi: seri, adet: 1,
+  }, T).metraj.camParcalari[0].en;
+
+  dogru('60 > 70 > 80 (cam küçülüyor)', camEni(60) > camEni(70) && camEni(70) > camEni(80));
+
+  // firma kendi payını girebilir
+  const ozelTablo = JSON.parse(JSON.stringify(T));
+  ozelTablo.profilPaylari[70].kanatCamPayi = 40;   // daha az pay → daha büyük cam
+  const varsayilan = hesapla({
+    urunTipi: 'pencere', genislik: 1500, yukseklik: 1200, bolmeSayisi: 1,
+    kanatlar: ['sag'], renk: 'beyaz', camTipi: 'klasik', profilSerisi: 70, adet: 1,
+  }, T).metraj.camParcalari[0].en;
+  const ozel = hesapla({
+    urunTipi: 'pencere', genislik: 1500, yukseklik: 1200, bolmeSayisi: 1,
+    kanatlar: ['sag'], renk: 'beyaz', camTipi: 'klasik', profilSerisi: 70, adet: 1,
+  }, ozelTablo).metraj.camParcalari[0].en;
+  dogru('firma özel payı uygulanıyor', ozel > varsayilan);
+  esit('özel pay farkı 35 mm', ozel - varsayilan, 35, 1);
+
+  // bozuk değer varsayılana düşer
+  const bozuk = JSON.parse(JSON.stringify(T));
+  bozuk.profilPaylari[70].kanatCamPayi = 0;
+  const p = profilPaylariAl(70, bozuk);
+  esit('sıfır pay varsayılana düşer', p.kanatCamPayi, 57.5, 0.01);
+  const p2 = profilPaylariAl(70, { profilPaylari: { 70: { kasaPayi: 9999 } } });
+  esit('saçma pay varsayılana düşer', p2.kasaPayi, 60);
+  const p3 = profilPaylariAl(70, null);
+  esit('tablo yoksa varsayılan', p3.kayitGenisligi, 80);
 }
 
 /* ============================================================

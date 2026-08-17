@@ -16,7 +16,7 @@
  *  5. Fiyat tablosunda eksik alan sessizce 0 oluyordu → artık uyarı üretilir.
  */
 
-import { renkKademesi, sineklikRenkVarMi } from './fiyatTablosu.js';
+import { renkKademesi, sineklikRenkVarMi, profilPaylariAl } from './fiyatTablosu.js';
 
 /* köşe kesiminde oluşan fire (gönye kesim kaybı) */
 export const FIRE_KATSAYISI = 1.12;
@@ -43,7 +43,15 @@ export function hesapla(g, t) {
   const gGen = Math.max(0, sayi(g.genislik));
   const gYuk = Math.max(0, sayi(g.yukseklik));
   const gSagYuk = Math.max(0, sayi(g.sagYukseklik, gYuk));
-  const p = Math.max(30, sayi(g.profilSerisi, 70));       // profil genişliği
+  /* PROFİL PAYLARI — profil serisi profilin DERİNLİĞİDİR, görünen yüz
+     genişliği değildir. Cam ölçüsü bu paylara göre hesaplanır ve firma
+     kendi profil markasına göre Fiyat Ayarları'ndan düzeltebilir. */
+  const pay = profilPaylariAl(g.profilSerisi, t);
+  const kasaPayi = pay.kasaPayi;          // dış ölçüden her kenardan
+  const kayitGen = pay.kayitGenisligi;    // orta kayıt görünen genişliği
+  const kanatCamPayi = pay.kanatCamPayi;  // açılan bölmede her kenardan
+  const sabitCamPayi = pay.sabitCamPayi;  // sabit bölmede her kenardan
+  const p = kasaPayi;                     // geriye dönük uyumluluk
   const adet = Math.max(1, Math.floor(sayi(g.adet, 1)));
   const urunTipi = g.urunTipi || 'pencere';
 
@@ -65,11 +73,11 @@ export function hesapla(g, t) {
   }
 
   /* ---------- 2. GEOMETRİ ---------- */
-  const icGen = Math.max(0, gGen - 2 * p);
-  const icYuk = Math.max(0, gYuk - 2 * p);
+  const icGen = Math.max(0, gGen - 2 * kasaPayi);
+  const icYuk = Math.max(0, gYuk - 2 * kasaPayi);
 
   const dikmeSayisi = bolmeSayisi - 1;
-  const dikmeToplamGenislik = dikmeSayisi * p;
+  const dikmeToplamGenislik = dikmeSayisi * kayitGen;
   const netBolmeToplam = Math.max(0, icGen - dikmeToplamGenislik);
 
   /* BÖLME GENİŞLİKLERİ — elle girilen değerler EKSEN ÖLÇÜSÜDÜR.
@@ -88,8 +96,8 @@ export function hesapla(g, t) {
 
   /* eksen ölçüsü → net açıklık */
   const eksendenNete = (eksen, i) => {
-    const solPay = i === 0 ? p : p / 2;
-    const sagPay = i === bolmeSayisi - 1 ? p : p / 2;
+    const solPay = i === 0 ? kasaPayi : kayitGen / 2;
+    const sagPay = i === bolmeSayisi - 1 ? kasaPayi : kayitGen / 2;
     return Math.max(0, eksen - solPay - sagPay);
   };
 
@@ -136,8 +144,8 @@ export function hesapla(g, t) {
   let enineAktif = false;
 
   if (enineIstendi) {
-    const altHam = kayitYuksekligi - p - p / 2;   // zemin kasası + kayıt yarısı
-    const ustHam = icYuk - Math.max(0, altHam) - p;
+    const altHam = kayitYuksekligi - kasaPayi - kayitGen / 2;  // zemin kasası + kayıt yarısı
+    const ustHam = icYuk - Math.max(0, altHam) - kayitGen;
     if (altHam > 50 && ustHam > 50) {
       enineAktif = true;
       altNetYuk = altHam;
@@ -194,8 +202,9 @@ export function hesapla(g, t) {
         return;
       }
 
-      // DÜZELTME 1: açılan kanatta cam, kasa + kanat kadar küçülür
-      const icPay = acilirMi ? p : CITA_MM;
+      /* Açılan bölmede kanat profili + cam çıtası, sabit bölmede yalnız
+         çıta payı düşülür. Değerler profil serisinin ayarlarından gelir. */
+      const icPay = acilirMi ? kanatCamPayi : sabitCamPayi;
       const camW = Math.max(0, bg - 2 * icPay);
       const camH = Math.max(0, yuk - 2 * icPay);
 
@@ -218,8 +227,8 @@ export function hesapla(g, t) {
   // DÜZELTME 4: açılı pencerede de profil payı düşülür
   if (isAcili) {
     const ortYuk = (gYuk + gSagYuk) / 2;
-    const netW = Math.max(0, gGen - 2 * p);
-    const netH = Math.max(0, ortYuk - 2 * p);
+    const netW = Math.max(0, gGen - 2 * kasaPayi - 2 * sabitCamPayi);
+    const netH = Math.max(0, ortYuk - 2 * kasaPayi - 2 * sabitCamPayi);
     camM2 = (netW * netH) / 1e6;
     camParcalari.length = 0;
     camParcalari.push({

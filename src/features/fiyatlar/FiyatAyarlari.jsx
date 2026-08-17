@@ -1,5 +1,5 @@
 import React from 'react';
-import { CAM_TIPLERI, SINEKLIK_TIPLERI } from '../../utils/fiyatTablosu.js';
+import { CAM_TIPLERI, SINEKLIK_TIPLERI, PROFIL_SERILERI } from '../../utils/fiyatTablosu.js';
 
 export default function FiyatAyarlari({ tablo, yukleniyor, degistir, kaydet, aktifSeri, seriDegis }) {
   return (
@@ -98,6 +98,33 @@ export default function FiyatAyarlari({ tablo, yukleniyor, degistir, kaydet, akt
                   <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
                     {item.label}:
                     <div><input type="number" value={tablo[sp.id]?.[item.key] ?? ''} onChange={(e) => degistir([sp.id, item.key], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> ₺</div>
+                  </label>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!yukleniyor && (
+        <div style={{ marginTop: '12px', backgroundColor: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+          <h4 style={{ margin: '0 0 4px 0', color: '#1E3A8A', fontSize: '13px', borderBottom: '1px solid #eee', paddingBottom: '4px' }}>Profil Payları</h4>
+          <p style={{ fontSize: '11px', color: '#64748b', margin: '4px 0 10px 0' }}>
+            Bu değerler profil üreticinizin teknik katalogundan gelir. Cam ölçüsü bu paylara göre hesaplanır.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+            {PROFIL_SERILERI.map(seri => (
+              <div key={seri}>
+                <h5 style={{ margin: '0 0 8px 0', color: '#1E3A8A', fontSize: '12px' }}>{seri}'lik Seri</h5>
+                {[
+                  { key: 'kasaPayi', label: 'Kasa Payı (mm)' },
+                  { key: 'kayitGenisligi', label: 'Kayıt Genişliği (mm)' },
+                  { key: 'kanatCamPayi', label: 'Kanat Cam Payı (mm)' },
+                  { key: 'sabitCamPayi', label: 'Sabit Cam Payı (mm)' },
+                ].map(item => (
+                  <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
+                    {item.label}:
+                    <div><input type="number" value={tablo.profilPaylari?.[seri]?.[item.key] ?? ''} onChange={(e) => degistir(['profilPaylari', seri, item.key], e.target.value)} style={{ width: '60px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px' }}/> mm</div>
                   </label>
                 ))}
               </div>

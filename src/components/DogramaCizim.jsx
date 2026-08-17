@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { profilPaylariAl } from '../utils/fiyatTablosu.js';
 
 /**
  * eWindoore — Ortak Doğrama Çizim Motoru
@@ -46,6 +47,7 @@ export default function DogramaCizim({
   tuvalGenisligi = 700,
   tuvalYuksekligi = 460,
   olcuGoster = true,
+  fiyatTablosu = null,      // profil payları buradan okunur, motorla aynı olsun
   camEtiketGoster = true,   // müşteriye giden teklifte cam kesim ölçüleri gizlenir
   etiketGoster = true,      // sağ alttaki teknik etiket
 }) {
@@ -77,19 +79,17 @@ export default function DogramaCizim({
     const X = (olcuGoster ? 96 : 20) + (alanW - W) / 2;
     const Y = (olcuGoster ? 32 : 20) + (alanH - Hmax) / 2;
 
-    /* ⚠️ Profil kalınlıkları fiyat motoruyla BİREBİR AYNI olmalı.
-       Motor (fiyatHesapla.js) üçünü de profilSerisi (p) kabul ediyor:
-         kasa   → icGen = gGen - 2p
-         kayıt  → dikmeToplamGenislik = dikmeSayisi * p
-         kanat  → icPay = p
-       Burada farklı bir çarpan kullanılırsa çizimdeki ara ölçüler ile
-       kesim listesi birbirini tutmaz. Daha önce kanat 1.06p, kayıt 1.28p
-       alınıyordu ve eksen ölçülerinde 10 mm sapmaya yol açıyordu. */
-    const p = Math.max(30, Number(profilSerisi) || 70);
-    const kasa = Math.max(6, p * olcek);
-    const kanat = Math.max(5, p * olcek);
-    const kayit = Math.max(6, p * olcek);
-    const cita = Math.max(2, 16 * olcek);
+    /* ⚠️ Profil payları fiyat motoruyla AYNI KAYNAKTAN gelir.
+       profilPaylariAl() hem burada hem fiyatHesapla.js'te kullanılır —
+       böylece çizimdeki ara ölçüler ile kesim listesi asla ayrışamaz.
+       Daha önce burada profilSerisi doğrudan kullanılıyordu ve cam
+       ölçüsü gerçekten 40 mm sapıyordu. */
+    const pay = profilPaylariAl(profilSerisi, fiyatTablosu);
+    const p = pay.kasaPayi;
+    const kasa = Math.max(6, pay.kasaPayi * olcek);
+    const kanat = Math.max(5, pay.kanatCamPayi * olcek);
+    const kayit = Math.max(6, pay.kayitGenisligi * olcek);
+    const cita = Math.max(2, pay.sabitCamPayi * olcek);
     const conta = Math.max(1.2, 6 * olcek);
 
     // üst kenar eğimli olabilir (açılı pencere)
@@ -174,19 +174,20 @@ export default function DogramaCizim({
       W, Hsol, Hsag, Hmax, X, Y, alt, ustSol, ustSag, ustY,
       kasa, kanat, kayit, cita,
       icX, icSag, icAlt, icW, n, bolmeler,
-      enineAktif, eksenY, p,
+      enineAktif, eksenY, p, pay,
     };
   }, [
     genislik, yukseklik, sagYukseklik, bolmeSayisi, bolmeGenislikleri,
     kanatlar, profilSerisi, lambiriVar, lambiriBoyu, enineBolmeVar,
     enineBolmeYuksekligi, urunTipi, tuvalGenisligi, tuvalYuksekligi, olcuGoster,
+    fiyatTablosu,
     lambiriYonu,
     camEtiketGoster, etiketGoster,
   ]);
 
   const {
     TW, TH, olcek, mmEn, mmSol, mmSag, W, Hmax, X, Y, alt, ustSol, ustSag,
-    kasa, kayit, icX, icSag, icAlt, n, bolmeler, enineAktif, eksenY,
+    kasa, kayit, icX, icSag, icAlt, n, bolmeler, enineAktif, eksenY, pay,
   } = g;
 
   const mm = (px) => Math.round(px / olcek);
@@ -611,7 +612,7 @@ export default function DogramaCizim({
         <line x1={TW - 220} y1={TH - 44} x2={TW - 12} y2={TH - 44} stroke="#c8d3e0" strokeWidth="0.9" />
         <text x={TW - 12} y={TH - 31} textAnchor="end" fontSize="8.8" fill="#7d8b9e"
           fontFamily="'JetBrains Mono', monospace">
-          {urunTipiAdi(urunTipi)} · {n} BÖLME{enineAktif ? ' · ENİNE KAYIT' : ''} · UPVC {g.p}mm
+          {urunTipiAdi(urunTipi)} · {n} BÖLME{enineAktif ? ' · ENİNE KAYIT' : ''} · UPVC {pay.seri}mm
         </text>
         <text x={TW - 12} y={TH - 19.5} textAnchor="end" fontSize="8.8" fill="#7d8b9e"
           fontFamily="'JetBrains Mono', monospace">
